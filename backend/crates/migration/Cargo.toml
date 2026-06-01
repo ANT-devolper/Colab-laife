@@ -15,3 +15,13 @@ path = "src/main.rs"
 [dependencies]
 sea-orm-migration.workspace = true
 tokio.workspace = true
+
+[dev-dependencies]
+# Integration tests apply the migrations against a throwaway PostgreSQL and
+# round-trip through the entities.
+entity = { path = "../entity" }
+sea-orm.workspace = true
+uuid.workspace = true
+testcontainers.workspace = true
+testcontainers-modules.workspace = true
+pretty_assertions.workspace = true

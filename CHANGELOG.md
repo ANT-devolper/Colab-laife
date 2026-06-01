@@ -34,3 +34,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   PostgreSQL via SeaORM, `200`/`503`). Covered by a unit test (mock connection, no Docker)
   and an integration test (throwaway PostgreSQL via testcontainers). The `api` crate now
   depends on `sea-orm`; `main` wires tracing, the database connection, and the HTTP server.
+- Migration infrastructure split into `PublicMigrator` (cross-tenant `public` schema, also
+  driven by the `cargo run -p migration` CLI) and `TenantMigrator` (per-tenant schema, run
+  by the future provisioning flow).
+- First public-schema migration and entity: `organizations` (tenant root — id, unique name
+  doubling as schema slug, plan, due date, employee limit, active flag, timestamps). Covered
+  by integration tests (persist + default columns, unique-name constraint). Enabled SeaORM
+  `with-uuid`/`with-chrono` and pinned `uuid` (v4) in the workspace.
