@@ -81,16 +81,53 @@ Work is done **directly on `main`** for now (no feature branches). Claude **comm
 automatically** once the flow above is satisfied. **Pushing is manual — only the user
 pushes.** Claude never pushes.
 
-## Stack — TO BE DEFINED
+## Stack
 
-- **Backend: Rust** (fixed).
-- **Web framework:** TBD.
-- **Persistence / database:** TBD.
-- **Frontend:** TBD.
-- **Deploy target** (serverless vs. server/container): TBD.
+The old system (`colab-life-test/`) is a **functional reference only** — we redesign
+freely (see "Project" above).
 
-These will be filled in here as we decide them.
+- **Backend language: Rust.**
+- **Web framework: Axum** (Tokio/Tower ecosystem; runs as a server or on Lambda).
+- **Persistence: SeaORM** (async ORM) over **PostgreSQL**; migrations via
+  `sea-orm-migration`.
+- **Frontend: Elm** (The Elm Architecture; talks to the backend over HTTP/JSON using
+  decoders/encoders).
+- **Deploy target: TBD.** Axum runs both as a long-running server and on AWS Lambda.
+  Recommendation when we decide: a **container/long-running server** — a shared
+  connection pool is cheaper and simpler to operate under many concurrent connections
+  (no external pooler), whereas Lambda needs a pooler (RDS Proxy/PgBouncer) once
+  connection counts grow.
+- **Mobile: TBD.**
 
-## Essential commands — TO BE DEFINED
+## Testing stack
 
-To be filled in once the Rust scaffold exists (e.g. `cargo test`, `cargo build`).
+These tools back the mandatory TDD flow above. The **full suite** required green before
+every commit spans all the levels below.
+
+- **Unit (backend):** `cargo test` (native) + `rstest` (fixtures/parametrization) +
+  `mockall` (trait mocks, to isolate services from SeaORM) + `pretty_assertions`.
+- **Integration (backend):** `axum-test` (real HTTP requests through the Axum app) +
+  `testcontainers` (a throwaway real PostgreSQL in Docker). **The test environment needs
+  Docker.**
+- **Unit (frontend):** `elm-test` (idiomatic Elm test runner, includes fuzz testing).
+- **E2E (browser, full-stack):** Playwright.
+
+## Essential commands
+
+> Provisional until the scaffold exists; refine once the Cargo workspace and Elm app are
+> in place.
+
+```bash
+# Backend (Rust)
+cargo test            # unit + integration (integration needs Docker for testcontainers)
+cargo run             # run the API
+cargo build           # build
+sea-orm-cli migrate   # database migrations
+
+# Frontend (Elm)
+elm-test              # unit tests / TDD
+elm make              # build (or via the chosen bundler for dev)
+
+# E2E
+npx playwright test
+```
