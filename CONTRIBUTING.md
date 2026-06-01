@@ -78,8 +78,10 @@ just migrate up            # apply migrations (uses DATABASE_URL)
 just db-down               # stop it
 ```
 
-`DATABASE_URL` defaults to `postgres://colab:colab@localhost:5432/colab_life` (see the
-`justfile`); override it via the environment when needed.
+`DATABASE_URL` defaults to `postgres://colab:colab@localhost:5432/colab_life` and
+`JWT_SECRET` (used by the API to sign session tokens) defaults to a dev-only placeholder —
+both via the `justfile`; override them through the environment when needed. Use a strong,
+protected `JWT_SECRET` in any non-dev environment.
 
 ## Optional tools
 

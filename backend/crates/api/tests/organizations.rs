@@ -28,7 +28,7 @@ async fn server() -> TestServer {
     PublicMigrator::up(&db, None)
         .await
         .expect("public migrations should apply");
-    TestServer::new(build_router(db, url))
+    TestServer::new(build_router(db, url, b"test-secret".to_vec()))
 }
 
 #[tokio::test]

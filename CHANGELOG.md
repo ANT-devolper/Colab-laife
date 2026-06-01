@@ -71,3 +71,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   otherwise. `AppState` now carries the `database_url` alongside the connection (so handlers
   can open search-path connections); `build_router` takes `(db, database_url)`.
   Integration-tested with `axum-test`.
+- Native authentication in the `service` crate (`auth`): `authenticate` verifies an
+  email/password against the `public` schema (unknown email, soft-deleted user and wrong
+  password all collapse to one `InvalidCredentials` outcome to avoid user enumeration; an
+  inactive organization yields `OrganizationInactive`), and `encode_token` / `decode_token`
+  issue and validate stateless **JWT** session tokens (HS256, `Claims { sub, org, schema,
+  is_admin, exp }`, 24h expiry; see ADR 0008). Pinned `jsonwebtoken` (pure-Rust
+  `rust_crypto` backend) in the workspace. Unit-tested (token round-trip, wrong secret,
+  expiry) and integration-tested (`authenticate` against a real database).
+- `POST /auth/login` endpoint exchanging credentials for a session JWT: `200` with
+  `{ token, token_type }`, `401` for invalid credentials, `403` for an inactive organization.
+  `AppState` now also carries the `jwt_secret`; `build_router` takes
+  `(db, database_url, jwt_secret)` and the API reads `JWT_SECRET` from the environment
+  (dev-only default in the `justfile`). Integration-tested with `axum-test`.

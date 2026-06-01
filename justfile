@@ -4,6 +4,10 @@
 # Local dev database connection string used by `run` and `migrate`.
 export DATABASE_URL := env_var_or_default("DATABASE_URL", "postgres://colab:colab@localhost:5432/colab_life")
 
+# Secret used to sign session JWTs locally. Dev-only — set a strong, protected
+# secret via the environment in real deployments.
+export JWT_SECRET := env_var_or_default("JWT_SECRET", "dev-only-insecure-secret-change-me")
+
 # List available recipes.
 default:
     @just --list

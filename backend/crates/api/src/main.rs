@@ -16,6 +16,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     })?;
     let db = Database::connect(database_url.clone()).await?;
 
+    let jwt_secret = std::env::var("JWT_SECRET")
+        .map_err(|_| "JWT_SECRET must be set (a strong random secret signs session tokens)")?;
+
     let port: u16 = std::env::var("PORT")
         .ok()
         .and_then(|p| p.parse().ok())
@@ -24,7 +27,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("listening on {addr}");
-    axum::serve(listener, api::build_router(db, database_url)).await?;
+    axum::serve(listener, api::build_router(db, database_url, jwt_secret)).await?;
 
     Ok(())
 }

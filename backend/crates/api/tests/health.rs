@@ -28,7 +28,7 @@ async fn ready_reports_ready_when_postgres_is_reachable() {
     let db = Database::connect(&url)
         .await
         .expect("failed to connect to postgres");
-    let server = TestServer::new(build_router(db, url));
+    let server = TestServer::new(build_router(db, url, b"test-secret".to_vec()));
 
     let response = server.get("/health/ready").await;
 

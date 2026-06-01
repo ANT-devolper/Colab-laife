@@ -20,6 +20,7 @@ update the old one's status to *Superseded by NNNN*.
 | [0005](0005-frontend-elm.md) | Frontend in Elm | Accepted |
 | [0006](0006-password-hashing-argon2.md) | Password hashing with Argon2 | Accepted |
 | [0007](0007-tenant-provisioning.md) | Tenant provisioning and schema resolution | Accepted |
+| [0008](0008-stateless-jwt-sessions.md) | Stateless authentication with JWT sessions | Accepted |
 
 ## Template
 

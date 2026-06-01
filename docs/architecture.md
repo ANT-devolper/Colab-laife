@@ -12,9 +12,9 @@ frontend consumes it. State is persisted in PostgreSQL through SeaORM.
 Elm frontend  ──HTTP/JSON──>  Axum backend  ──SeaORM──>  PostgreSQL
 ```
 
-✅ The backend skeleton (router + health probes), the cross-tenant schema, and password
-hashing exist today. 🚧 The Elm frontend, the business modules and their endpoints are
-planned.
+✅ The backend skeleton (router + health probes), the cross-tenant schema, password hashing,
+tenant provisioning and credential login (JWT) exist today. 🚧 The Elm frontend, the auth
+middleware, and the business modules and their endpoints are planned.
 
 ## Backend workspace
 
@@ -23,16 +23,17 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes and `POST /organizations`. Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning endpoint |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations` and `POST /auth/login`. Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + login endpoints |
 | `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user` |
 | `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema |
-| `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning |
+| `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication |
 
-The router is created by `build_router(db, database_url)` in
+The router is created by `build_router(db, database_url, jwt_secret)` in
 `backend/crates/api/src/lib.rs`, which is kept separate from `main` so integration tests can
 drive the real routes over HTTP. Shared state (`AppState`) carries an
-`Arc<DatabaseConnection>` plus the `database_url` (so handlers can open the search-path
-connections that tenant provisioning needs).
+`Arc<DatabaseConnection>`, the `database_url` (so handlers can open the search-path
+connections that tenant provisioning needs) and the `jwt_secret` (read from `JWT_SECRET`,
+used to sign and verify session tokens).
 
 Business logic lives in `service` so it can be unit-tested without a database — e.g.
 `hash_password` / `verify_password` over Argon2 in
@@ -83,6 +84,24 @@ for a duplicate, `500` otherwise.
 - **`user`** (`backend/crates/entity/src/user.rs`) — `id` (UUID), `name`, unique `email`,
   `password_hash`, `is_admin`, `organization_id` (FK → organization), `deleted`
   (soft-delete), timestamps.
+
+## Authentication
+
+Authentication is native and **stateless** ([ADR 0008](adr/0008-stateless-jwt-sessions.md)): ✅
+
+- `POST /auth/login` (`backend/crates/api/src/auth.rs`) takes `{ email, password }`,
+  verifies them against `public` and returns a signed **JWT** on success
+  (`200 { token, token_type: "Bearer" }`). Wrong/unknown credentials → `401`; a deactivated
+  organization → `403`.
+- `service::auth::authenticate` does the verification: it looks up a non-deleted user by
+  email and checks the Argon2 hash. Unknown email, soft-deleted user and wrong password all
+  collapse to one `InvalidCredentials` outcome (no user enumeration); a valid user whose
+  organization is inactive yields `OrganizationInactive`.
+- The token carries `Claims { sub, org, schema, is_admin, exp }` (HS256, signed with
+  `JWT_SECRET`, 24h expiry). `schema` lets the planned auth middleware resolve the tenant
+  from the token alone. Encoding/decoding live in `service::auth`
+  (`encode_token` / `decode_token`); the middleware that enforces them on protected routes is
+  🚧 planned.
 
 ## Health & operability
 

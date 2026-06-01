@@ -3,29 +3,38 @@ use axum::Router;
 use sea_orm::DatabaseConnection;
 use std::sync::Arc;
 
+mod auth;
 mod health;
 mod organizations;
 
 /// Shared, cheaply cloneable application state. `DatabaseConnection` is not
 /// `Clone`, so it lives behind an `Arc`; `database_url` lets handlers open the
-/// search-path connections that tenant provisioning needs.
+/// search-path connections that tenant provisioning needs; `jwt_secret` signs
+/// and verifies session tokens.
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<DatabaseConnection>,
     pub database_url: Arc<str>,
+    pub jwt_secret: Arc<[u8]>,
 }
 
 /// Builds the application router with its shared state. Kept separate from
 /// `main` so tests can drive the real routes over HTTP.
-pub fn build_router(db: DatabaseConnection, database_url: impl Into<String>) -> Router {
+pub fn build_router(
+    db: DatabaseConnection,
+    database_url: impl Into<String>,
+    jwt_secret: impl Into<Vec<u8>>,
+) -> Router {
     let state = AppState {
         db: Arc::new(db),
         database_url: Arc::from(database_url.into()),
+        jwt_secret: Arc::from(jwt_secret.into()),
     };
     Router::new()
         .route("/health", get(health::health))
         .route("/health/ready", get(health::ready))
         .route("/organizations", post(organizations::create))
+        .route("/auth/login", post(auth::login))
         .with_state(state)
 }
 
@@ -40,7 +49,7 @@ mod tests {
     // so the liveness probe can be exercised without Docker.
     fn mock_router() -> axum::Router {
         let db = MockDatabase::new(DatabaseBackend::Postgres).into_connection();
-        crate::build_router(db, "postgres://unused")
+        crate::build_router(db, "postgres://unused", b"test-secret".to_vec())
     }
 
     #[tokio::test]
