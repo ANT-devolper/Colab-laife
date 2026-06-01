@@ -156,3 +156,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   update preserving untouched FKs → soft delete; unknown sector and unknown manager → `422`;
   permissionless member → `403`) plus a migration test (the `collaborator` table lands in the
   migrated tenant schema).
+- Elm SPA foundation (Phase 2): the frontend (`frontend/`) gains a sign-in page built on The
+  Elm Architecture — `Api.elm` (the HTTP boundary: login request encoder, `{ token, token_type }`
+  response decoder, `Authorization: Bearer` header helper, `POST /auth/login` command, all
+  root-relative since the SPA is same-origin), `Page/Login.elm` (the credentials form, reporting
+  the obtained token through an `OutMsg`) and `Main.elm` (the `Login` / `Authenticated` shell).
+  Added `elm/http` and `elm/json` to `elm.json`. Unit-tested with the first `elm-test`
+  (`tests/ApiTest.elm`: the login encoder and the response decoder, including a missing-field
+  failure).
+- Single-origin SPA delivery (Phase 2, [ADR 0011](docs/adr/0011-serve-spa-from-axum.md)): the
+  `api` binary now serves the built Elm SPA itself via `api::with_static_spa` (a `tower-http`
+  `ServeDir` fallback with `index.html` for unknown client-side routes), so the browser talks to
+  one origin with no CORS. API routes keep precedence over static files. `main` enables it only
+  when `FRONTEND_DIST` is set (API-only otherwise), and the `justfile` gains `frontend-build`
+  (compile `src/Main.elm` into `frontend/dist` plus the HTML shell) with `run` pointing
+  `FRONTEND_DIST` at it. New workspace dependency `tower-http` (feature `fs`). Integration-tested
+  with a `MockDatabase` (no Docker): index at the root, real assets, unknown-path fallback to
+  `index.html`, and API precedence.

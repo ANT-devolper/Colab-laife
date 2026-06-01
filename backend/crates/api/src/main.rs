@@ -25,9 +25,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .unwrap_or(8080);
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
 
+    let mut router = api::build_router(db, database_url, jwt_secret);
+
+    // Serve the built Elm SPA from the same origin when its dist directory is
+    // configured (see ADR 0011); otherwise run as an API-only server.
+    if let Ok(dist) = std::env::var("FRONTEND_DIST") {
+        tracing::info!("serving SPA from {dist}");
+        router = api::with_static_spa(router, dist);
+    }
+
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("listening on {addr}");
-    axum::serve(listener, api::build_router(db, database_url, jwt_secret)).await?;
+    axum::serve(listener, router).await?;
 
     Ok(())
 }

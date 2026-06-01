@@ -8,6 +8,10 @@ export DATABASE_URL := env_var_or_default("DATABASE_URL", "postgres://colab:cola
 # secret via the environment in real deployments.
 export JWT_SECRET := env_var_or_default("JWT_SECRET", "dev-only-insecure-secret-change-me")
 
+# Directory holding the built Elm SPA. When set, `run` serves it on the same
+# origin as the API (see ADR 0011); built by `frontend-build`.
+export FRONTEND_DIST := justfile_directory() / "frontend/dist"
+
 # List available recipes.
 default:
     @just --list
@@ -25,8 +29,13 @@ test:
     cd frontend && npm test
     cd e2e && npm test
 
-# Run the backend API.
-run:
+# Build the Elm SPA into frontend/dist (compiled JS + the HTML shell).
+frontend-build:
+    cd frontend && npx elm make src/Main.elm --output=dist/app.js
+    cp frontend/index.html frontend/dist/index.html
+
+# Run the backend API, serving the built SPA from the same origin (see ADR 0011).
+run: frontend-build
     cd backend && cargo run -p api
 
 # Run database migrations: `just migrate up`, `just migrate down`, `just migrate status`...

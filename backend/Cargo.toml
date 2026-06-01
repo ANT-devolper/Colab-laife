@@ -13,6 +13,8 @@ rust-version = "1.95.0"
 [workspace.dependencies]
 # Web / async
 axum = "0.8.9"
+# Static file serving for the Elm SPA (single-origin delivery; see ADR 0011).
+tower-http = { version = "0.6.6", features = ["fs"] }
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.20", features = ["env-filter", "fmt"] }

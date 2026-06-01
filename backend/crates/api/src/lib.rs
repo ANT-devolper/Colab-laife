@@ -2,7 +2,9 @@ use axum::routing::{get, patch, post};
 use axum::Router;
 use sea_orm::DatabaseConnection;
 use service::tenant::TenantRegistry;
+use std::path::Path;
 use std::sync::Arc;
+use tower_http::services::{ServeDir, ServeFile};
 
 mod auth;
 mod collaborators;
@@ -63,6 +65,17 @@ pub fn build_router(
             patch(collaborators::update).delete(collaborators::delete),
         )
         .with_state(state)
+}
+
+/// Wraps an API router so requests that match no API route are served from the
+/// built Elm SPA in `dist_dir` (single origin, no CORS — see ADR 0011). Real
+/// files (the compiled JS, assets) are returned from disk; any other path falls
+/// back to `index.html` so the SPA can boot and route on the client. API routes
+/// keep precedence: they are matched before this fallback runs.
+pub fn with_static_spa(router: Router, dist_dir: impl AsRef<Path>) -> Router {
+    let dist = dist_dir.as_ref();
+    let serve = ServeDir::new(dist).fallback(ServeFile::new(dist.join("index.html")));
+    router.fallback_service(serve)
 }
 
 #[cfg(test)]

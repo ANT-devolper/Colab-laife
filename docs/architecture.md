@@ -9,14 +9,18 @@ ColabLife is a multi-tenant SaaS. A Rust backend (Axum) exposes an HTTP/JSON API
 frontend consumes it. State is persisted in PostgreSQL through SeaORM.
 
 ```
-Elm frontend  ──HTTP/JSON──>  Axum backend  ──SeaORM──>  PostgreSQL
+Elm SPA  ──HTTP/JSON──>  Axum backend  ──SeaORM──>  PostgreSQL
+   ▲                          │
+   └──── served as static ────┘   (same origin, see ADR 0011)
 ```
 
 ✅ The backend skeleton (router + health probes), the cross-tenant schema, password hashing,
 tenant provisioning, credential login (JWT), the authenticated request pipeline (per-request
-tenant resolution + auth extractor) and granular RBAC (per-tenant permissions + per-route guard)
-exist today — the foundation is complete, and the first tenant-domain resource (`sectors`) is in
-place. 🚧 The Elm frontend and the remaining business modules with their endpoints are planned.
+tenant resolution + auth extractor), granular RBAC (per-tenant permissions + per-route guard)
+and the `sector`/`role`/`collaborator` tenant-domain resources exist today — the foundation and
+the cadastro backend are complete. The Elm frontend has its foundation: a login page that
+obtains a session token, served from the Axum binary on the same origin. 🚧 Read-only lists in
+the SPA and the remaining business modules with their endpoints are planned.
 
 ## Backend workspace
 
@@ -179,6 +183,25 @@ removal is a **soft delete** (`active = false`); listings filter to active rows.
   body. The org-hierarchy/"accessible collaborators" service is 🚧 deferred (only the
   `manager_id` column exists for now). ✅
 
+## Frontend & delivery
+
+The frontend is an Elm SPA (`frontend/`, The Elm Architecture) that talks to the backend
+over HTTP/JSON. Current scope: a sign-in page that exchanges credentials for a session token
+(`Api.elm` — the HTTP boundary; `Page/Login.elm` — the form; `Main.elm` — the `Login` /
+`Authenticated` shell). ✅ Read-only lists land next. 🚧
+
+**Single-origin delivery** ([ADR 0011](adr/0011-serve-spa-from-axum.md)): the Axum binary
+serves the built SPA itself, so the browser only ever talks to one origin (no CORS). ✅
+
+- `api::with_static_spa(router, dist_dir)` adds a `tower-http` `ServeDir` as the router's
+  fallback, with `index.html` as the fallback for unknown paths (client-side routing). API
+  routes are matched first, so they keep precedence over static files.
+- `main` enables it only when `FRONTEND_DIST` is set, so the same binary can run API-only
+  (the default in pure-API tests). `just frontend-build` compiles the SPA into `frontend/dist`
+  and `just run` points `FRONTEND_DIST` at it.
+- Because static serving never touches the database, it is covered by a fast integration test
+  using a `MockDatabase` (no Docker).
+
 ## Health & operability
 
 The `api` crate exposes two probes (`backend/crates/api/src/health.rs`): ✅
@@ -196,9 +219,11 @@ Levels:
 - **Backend unit** — `cargo test` with `rstest` and `mockall`; services are isolated from
   the ORM (e.g. the liveness probe runs against a SeaORM `MockDatabase`, no Docker).
 - **Backend integration** — `axum-test` (real HTTP through the app) with `testcontainers`
-  (a throwaway PostgreSQL in Docker).
-- **Frontend unit** — `elm-test`.
-- **E2E** — Playwright.
+  (a throwaway PostgreSQL in Docker). Static SPA serving is integration-tested with a
+  `MockDatabase` (no Docker).
+- **Frontend unit** — `elm-test`. ✅ Covers the API boundary's pure parts (login encoder and
+  response decoder).
+- **E2E** — Playwright. 🚧 Planned (first spec lands with the read-only lists).
 
 ## See also
 

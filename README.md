@@ -6,14 +6,20 @@ recruitment, a whistleblower channel and a climate survey.
 
 ## Status
 
-**Early development — walking skeleton.** What exists today:
+**Early development — foundation complete, first vertical slice in progress.** What exists
+today:
 
 - HTTP liveness/readiness health probes (Axum).
-- `organizations` and `users` tables/entities in the cross-tenant `public` schema.
-- Argon2 password hashing in the `service` crate.
+- Multi-tenant foundation: `organizations`/`users` in the cross-tenant `public` schema, tenant
+  provisioning (a dedicated schema per organization), Argon2 password hashing, stateless JWT
+  login, a per-request tenant resolver + auth extractor, and granular per-tenant RBAC.
+- Cadastro backend in the tenant schema: `sector`, `role` and `collaborator`, each with
+  RBAC-guarded CRUD.
+- Elm SPA foundation: a login page that obtains a session token, served from the Axum binary
+  on the same origin.
 
-The eight business modules above are **planned** — see [`docs/domain/`](docs/domain/) for
-their intended scope.
+The eight business modules above are otherwise **planned** — see [`docs/domain/`](docs/domain/)
+for their intended scope.
 
 ## Stack
 
