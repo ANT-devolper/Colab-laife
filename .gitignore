@@ -1,0 +1,11 @@
+# Reference system being reimplemented — never commit it
+colab-life-test/
+
+# Rust
+/target
+**/*.rs.bk
+
+# OS / editor noise
+.DS_Store
+.idea/
+.vscode/
