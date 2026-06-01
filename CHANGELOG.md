@@ -45,3 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   email, password_hash, is_admin, soft-delete) belonging to an organization via a
   `organization_id` foreign key. Covered by integration tests (defaults + ownership, unique
   email, foreign-key enforcement).
+- Password hashing in the `service` crate: `hash_password`/`verify_password` over Argon2
+  (PHC strings, per-password random salt). Unit-tested (round-trip, wrong-password rejection,
+  salt randomness, malformed-hash handling); no Docker required. Pinned `argon2` in the
+  workspace.

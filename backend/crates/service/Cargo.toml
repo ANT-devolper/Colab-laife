@@ -7,6 +7,7 @@ rust-version.workspace = true
 [dependencies]
 entity = { path = "../entity" }
 sea-orm.workspace = true
+argon2.workspace = true
 
 [dev-dependencies]
 mockall.workspace = true
