@@ -137,9 +137,11 @@ actions). A caller's permissions are the resources reachable via
 - Resources are identified as `domain.action` (e.g. `user.read`), not the legacy
   `res://…` URIs. `permission_profile_users.user_id` references `public.users` by value
   only (no cross-schema FK).
-- Seeding a minimal catalog and an "Administrator" profile during provisioning is 🚧
-  (next step); the per-route guard `TenantContext::require(resource)` (admin bypass via the
-  token, `403` otherwise) is 🚧 planned.
+- Provisioning seeds a minimal resource catalog (`Resource::catalog()` in
+  `service::permission` — user and RBAC management) plus an "administrator" profile that
+  grants every resource, and links the tenant's admin user to it. ✅
+- The per-route guard `TenantContext::require(resource)` (admin bypass via the token, `403`
+  otherwise) is 🚧 planned.
 
 ## Health & operability
 

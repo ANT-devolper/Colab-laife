@@ -2,5 +2,6 @@
 
 pub mod auth;
 pub mod password;
+pub mod permission;
 pub mod provisioning;
 pub mod tenant;

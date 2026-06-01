@@ -6,7 +6,8 @@
 
 use migration::{MigratorTrait, PublicMigrator};
 use sea_orm::{
-    ConnectionTrait, Database, DatabaseBackend, DatabaseConnection, EntityTrait, Statement,
+    ColumnTrait, ConnectOptions, ConnectionTrait, Database, DatabaseBackend, DatabaseConnection,
+    EntityTrait, QueryFilter, Statement,
 };
 use service::password::verify_password;
 use service::provisioning::{provision_organization, NewOrganization};
@@ -78,6 +79,39 @@ async fn provisioning_creates_org_schema_and_admin() {
     // The dedicated schema exists and was migrated (TenantMigrator ran against it).
     assert!(schema_exists(&db, "acme").await);
     assert!(table_exists(&db, "acme", "seaql_migrations").await);
+}
+
+/// Opens a connection whose `search_path` targets `schema`, to inspect the
+/// tenant's RBAC tables directly.
+async fn tenant_conn(url: &str, schema: &str) -> DatabaseConnection {
+    let mut options = ConnectOptions::new(url.to_owned());
+    options.set_schema_search_path(schema.to_owned());
+    Database::connect(options).await.expect("tenant connect")
+}
+
+#[tokio::test]
+async fn provisioning_seeds_rbac_and_links_the_admin() {
+    let (db, url) = setup().await;
+
+    let provisioned = provision_organization(&db, &url, input("acme"))
+        .await
+        .expect("provisioning should succeed");
+    let tenant = tenant_conn(&url, "acme").await;
+
+    // The minimal resource catalog is seeded in the tenant schema.
+    let resources = entity::permission::resource::Entity::find()
+        .all(&tenant)
+        .await
+        .expect("query resources");
+    assert!(!resources.is_empty(), "expected a seeded resource catalog");
+
+    // An "administrator" profile exists and the admin holds exactly it.
+    let links = entity::permission::profile_user::Entity::find()
+        .filter(entity::permission::profile_user::Column::UserId.eq(provisioned.admin.id))
+        .all(&tenant)
+        .await
+        .expect("query profile_users");
+    pretty_assertions::assert_eq!(links.len(), 1, "admin should hold exactly one profile");
 }
 
 #[tokio::test]

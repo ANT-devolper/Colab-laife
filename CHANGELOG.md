@@ -105,3 +105,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   identifiers; `permission_profile_users.user_id` references `public.users` by value (no
   cross-schema FK). SeaORM entities added under `entity::permission`. Integration-tested
   (the tables land in the migrated tenant schema).
+- RBAC seeding on provisioning (`service::permission`): a `Resource` enum defines the minimal
+  catalog (`user.*`, `profile.*`) and `seed_tenant_rbac` plants it plus an "administrator"
+  profile granting every resource, linking it to the tenant's admin. Provisioning now drops
+  the tenant schema on any failure after its creation (not just migration). Unit-tested
+  (catalog identifiers/uniqueness) and integration-tested (catalog seeded, admin holds the
+  profile).

@@ -4,6 +4,7 @@
 //! as a safe SQL identifier before being interpolated into DDL.
 
 use crate::password::hash_password;
+use crate::permission::seed_tenant_rbac;
 use crate::tenant::is_valid_schema_name;
 use entity::{organization, user};
 use migration::{MigratorTrait, TenantMigrator};
@@ -63,9 +64,9 @@ impl From<DbErr> for ProvisionError {
 /// Provisions a tenant. `database_url` is needed to open a connection whose
 /// `search_path` points at the new schema, so `TenantMigrator` runs inside it.
 ///
-/// Atomicity across the create-schema / migrate / insert steps is best-effort:
-/// a failed migration drops the freshly created schema; the organization and
-/// admin rows are written in a single `public` transaction.
+/// Atomicity across the create-schema / migrate / seed / insert steps is
+/// best-effort: any failure after the schema is created drops it again; the
+/// organization and admin rows are written in a single `public` transaction.
 pub async fn provision_organization(
     db: &DatabaseConnection,
     database_url: &str,
@@ -84,37 +85,57 @@ pub async fn provision_organization(
         return Err(ProvisionError::NameTaken);
     }
 
-    // Create and migrate the tenant schema. `name` is validated above.
+    // Hash before touching the database so a hash failure leaves no schema.
+    let password_hash = hash_password(&input.admin_password).map_err(|_| ProvisionError::Hash)?;
+    // The admin id is generated up front so its tenant RBAC link can be seeded
+    // before the admin row is written to `public`.
+    let admin_id = Uuid::new_v4();
+
     db.execute_unprepared(&format!("CREATE SCHEMA IF NOT EXISTS \"{}\"", input.name))
         .await?;
 
+    // Everything past schema creation: on any failure, drop the schema.
+    match prepare_and_persist(db, database_url, &input, &password_hash, admin_id).await {
+        Ok(provisioned) => Ok(provisioned),
+        Err(error) => {
+            let _ = db
+                .execute_unprepared(&format!("DROP SCHEMA IF EXISTS \"{}\" CASCADE", input.name))
+                .await;
+            Err(error)
+        }
+    }
+}
+
+/// Migrates and seeds the tenant schema, then persists the organization and its
+/// admin in one `public` transaction. Separated so `provision_organization` can
+/// drop the schema on any failure here.
+async fn prepare_and_persist(
+    db: &DatabaseConnection,
+    database_url: &str,
+    input: &NewOrganization,
+    password_hash: &str,
+    admin_id: Uuid,
+) -> Result<Provisioned, ProvisionError> {
     let mut options = ConnectOptions::new(database_url.to_owned());
     options.set_schema_search_path(input.name.clone());
     let tenant_conn = Database::connect(options).await?;
-    if let Err(error) = TenantMigrator::up(&tenant_conn, None).await {
-        let _ = db
-            .execute_unprepared(&format!("DROP SCHEMA IF EXISTS \"{}\" CASCADE", input.name))
-            .await;
-        return Err(ProvisionError::Db(error));
-    }
+    TenantMigrator::up(&tenant_conn, None).await?;
+    seed_tenant_rbac(&tenant_conn, admin_id).await?;
 
-    let password_hash = hash_password(&input.admin_password).map_err(|_| ProvisionError::Hash)?;
-
-    // Persist the organization and its admin atomically in the public schema.
     let txn = db.begin().await?;
     let organization = organization::ActiveModel {
         id: Set(Uuid::new_v4()),
         name: Set(input.name.clone()),
-        plan: input.plan.map(Set).unwrap_or(NotSet),
+        plan: input.plan.clone().map(Set).unwrap_or(NotSet),
         ..Default::default()
     }
     .insert(&txn)
     .await?;
     let admin = user::ActiveModel {
-        id: Set(Uuid::new_v4()),
-        name: Set(input.admin_name),
-        email: Set(input.admin_email),
-        password_hash: Set(password_hash),
+        id: Set(admin_id),
+        name: Set(input.admin_name.clone()),
+        email: Set(input.admin_email.clone()),
+        password_hash: Set(password_hash.to_owned()),
         is_admin: Set(true),
         organization_id: Set(organization.id),
         ..Default::default()
