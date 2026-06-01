@@ -22,6 +22,7 @@ update the old one's status to *Superseded by NNNN*.
 | [0007](0007-tenant-provisioning.md) | Tenant provisioning and schema resolution | Accepted |
 | [0008](0008-stateless-jwt-sessions.md) | Stateless authentication with JWT sessions | Accepted |
 | [0009](0009-per-request-tenant-resolution.md) | Per-request tenant schema resolution and auth extractor | Accepted |
+| [0010](0010-granular-rbac.md) | Granular RBAC (profile → task → resource) | Accepted |
 
 ## Template
 

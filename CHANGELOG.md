@@ -99,3 +99,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `GET /auth/me`: first protected route, returns the caller's identity
   (`{ user_id, organization_id, schema, is_admin }`) from the verified token. Integration-tested
   with `axum-test` (valid token → identity, missing token → `401`, wrong-secret token → `401`).
+- RBAC schema in each tenant: `TenantMigrator` now creates the six `permission_*` tables
+  (`resources`, `tasks`, `task_resources`, `profiles`, `profile_tasks`, `profile_users`),
+  modeling user → profile → task → resource (see ADR 0010). Resources use `domain.action`
+  identifiers; `permission_profile_users.user_id` references `public.users` by value (no
+  cross-schema FK). SeaORM entities added under `entity::permission`. Integration-tested
+  (the tables land in the migrated tenant schema).

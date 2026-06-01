@@ -1,6 +1,7 @@
 pub use sea_orm_migration::prelude::*;
 
 mod public;
+mod tenant;
 
 /// Migrations for the cross-tenant `public` schema (organizations, users).
 /// Run day-to-day via `cargo run -p migration`.
@@ -21,7 +22,8 @@ pub struct TenantMigrator;
 
 impl MigratorTrait for TenantMigrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        // Tenant-schema tables are appended here as the domain model grows.
-        vec![]
+        vec![Box::new(
+            tenant::m20260601_000003_create_permissions::Migration,
+        )]
     }
 }

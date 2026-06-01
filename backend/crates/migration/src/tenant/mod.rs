@@ -1,0 +1,4 @@
+//! Migrations applied inside each tenant's dedicated schema (RBAC, and the
+//! domain tables added as the model grows).
+
+pub mod m20260601_000003_create_permissions;

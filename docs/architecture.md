@@ -25,7 +25,7 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 | Crate | Responsibility | Status |
 |---|---|---|
 | `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login` and the authenticated `GET /auth/me` (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor |
-| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user` |
+| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*` |
 | `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
 
@@ -55,8 +55,8 @@ Migrations are split accordingly in `backend/crates/migration/src/lib.rs`:
 - `PublicMigrator` — migrations for the `public` schema; run day-to-day via
   `cargo run -p migration`. Currently: create `organizations`, then `users`. ✅
 - `TenantMigrator` — migrations applied inside each tenant's schema, run by the tenant
-  provisioning flow. Currently empty; tenant tables are appended as the domain model
-  grows. 🚧
+  provisioning flow. Currently: the RBAC tables (see Authorization). ✅ More tenant tables
+  are appended as the domain model grows. 🚧
 
 ### Tenant provisioning
 
@@ -123,6 +123,23 @@ Authentication is native and **stateless** ([ADR 0008](adr/0008-stateless-jwt-se
 - `GET /auth/me` is the first protected route: it returns the caller's identity
   (`{ user_id, organization_id, schema, is_admin }`) from the verified token.
 - A per-route **RBAC permission guard** building on `TenantContext` is 🚧 planned.
+
+## Authorization (RBAC)
+
+Authorization is granular and per-tenant ([ADR 0010](adr/0010-granular-rbac.md)). A user
+holds **profiles**; a profile groups **tasks**; a task groups **resources** (the protected
+actions). A caller's permissions are the resources reachable via
+`profile_users → profiles → profile_tasks → tasks → task_resources → resources`.
+
+- The six `permission_*` tables live in each **tenant schema** (created by `TenantMigrator`,
+  `backend/crates/migration/src/tenant/`), with entities under
+  `backend/crates/entity/src/permission/`. ✅
+- Resources are identified as `domain.action` (e.g. `user.read`), not the legacy
+  `res://…` URIs. `permission_profile_users.user_id` references `public.users` by value
+  only (no cross-schema FK).
+- Seeding a minimal catalog and an "Administrator" profile during provisioning is 🚧
+  (next step); the per-route guard `TenantContext::require(resource)` (admin bypass via the
+  token, `403` otherwise) is 🚧 planned.
 
 ## Health & operability
 
