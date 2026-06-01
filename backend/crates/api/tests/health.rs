@@ -25,10 +25,10 @@ async fn ready_reports_ready_when_postgres_is_reachable() {
         .expect("failed to read mapped port");
     let url = format!("postgres://postgres:postgres@{host}:{port}/postgres");
 
-    let db = Database::connect(url)
+    let db = Database::connect(&url)
         .await
         .expect("failed to connect to postgres");
-    let server = TestServer::new(build_router(db));
+    let server = TestServer::new(build_router(db, url));
 
     let response = server.get("/health/ready").await;
 

@@ -23,14 +23,16 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes. Entry point in `main`; routes in `build_router`. | ✅ skeleton |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes and `POST /organizations`. Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning endpoint |
 | `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user` |
 | `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning |
 
-The router is created by `build_router(db)` in `backend/crates/api/src/lib.rs`, which is
-kept separate from `main` so integration tests can drive the real routes over HTTP. Shared
-state is an `Arc<DatabaseConnection>` (`AppState`).
+The router is created by `build_router(db, database_url)` in
+`backend/crates/api/src/lib.rs`, which is kept separate from `main` so integration tests can
+drive the real routes over HTTP. Shared state (`AppState`) carries an
+`Arc<DatabaseConnection>` plus the `database_url` (so handlers can open the search-path
+connections that tenant provisioning needs).
 
 Business logic lives in `service` so it can be unit-tested without a database — e.g.
 `hash_password` / `verify_password` over Argon2 in
@@ -68,6 +70,10 @@ level; HTTP endpoint 🚧)
 
 Cross-step atomicity is best-effort (schema DDL is non-transactional); a failed migration
 drops the new schema. Hardening is deferred.
+
+It is exposed over HTTP as `POST /organizations` (`backend/crates/api/src/organizations.rs`):
+`201` with the created organization and admin on success; `400` for an invalid name, `409`
+for a duplicate, `500` otherwise.
 
 ### Current data model (`public`)
 

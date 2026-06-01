@@ -22,6 +22,7 @@ service = { path = "../service" }
 [dev-dependencies]
 # `mock` lets unit tests build a DatabaseConnection without a real database.
 sea-orm = { workspace = true, features = ["mock"] }
+migration = { path = "../migration" }
 axum-test.workspace = true
 testcontainers.workspace = true
 testcontainers-modules.workspace = true

@@ -14,7 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let database_url = std::env::var("DATABASE_URL").map_err(|_| {
         "DATABASE_URL must be set (e.g. postgres://colab:colab@localhost:5432/colab_life)"
     })?;
-    let db = Database::connect(database_url).await?;
+    let db = Database::connect(database_url.clone()).await?;
 
     let port: u16 = std::env::var("PORT")
         .ok()
@@ -24,7 +24,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
     tracing::info!("listening on {addr}");
-    axum::serve(listener, api::build_router(db)).await?;
+    axum::serve(listener, api::build_router(db, database_url)).await?;
 
     Ok(())
 }

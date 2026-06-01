@@ -106,6 +106,7 @@ dependencies = [
  "axum",
  "axum-test",
  "entity",
+ "migration",
  "pretty_assertions",
  "rstest",
  "sea-orm",

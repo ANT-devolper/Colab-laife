@@ -66,3 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   organization plus its Argon2-hashed admin in one public-schema transaction. Cross-step
   atomicity is best-effort (see ADR 0007). Integration-tested end to end (schema created and
   migrated, admin loggable, duplicate and unsafe names rejected).
+- `POST /organizations` endpoint exposing tenant provisioning over HTTP: `201` with the
+  created organization and admin, `400` for an invalid name, `409` for a duplicate, `500`
+  otherwise. `AppState` now carries the `database_url` alongside the connection (so handlers
+  can open search-path connections); `build_router` takes `(db, database_url)`.
+  Integration-tested with `axum-test`.

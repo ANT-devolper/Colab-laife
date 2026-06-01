@@ -14,8 +14,8 @@ pub async fn health() -> impl IntoResponse {
 
 /// Readiness probe: confirms the process can reach PostgreSQL. A failing ping
 /// means we should not receive traffic yet, hence `503`.
-pub async fn ready(State(db): State<AppState>) -> impl IntoResponse {
-    match db.ping().await {
+pub async fn ready(State(state): State<AppState>) -> impl IntoResponse {
+    match state.db.ping().await {
         Ok(()) => (StatusCode::OK, Json(json!({ "status": "ready" }))),
         Err(_) => (
             StatusCode::SERVICE_UNAVAILABLE,
