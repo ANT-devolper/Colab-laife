@@ -5,6 +5,7 @@ use service::tenant::TenantRegistry;
 use std::sync::Arc;
 
 mod auth;
+mod collaborators;
 pub mod extract;
 mod health;
 mod organizations;
@@ -53,6 +54,14 @@ pub fn build_router(
         )
         .route("/roles", get(roles::list).post(roles::create))
         .route("/roles/{id}", patch(roles::update).delete(roles::delete))
+        .route(
+            "/collaborators",
+            get(collaborators::list).post(collaborators::create),
+        )
+        .route(
+            "/collaborators/{id}",
+            patch(collaborators::update).delete(collaborators::delete),
+        )
         .with_state(state)
 }
 

@@ -60,7 +60,7 @@ fn timestamp<T: IntoIden>(name: T) -> ColumnDef {
 }
 
 #[derive(DeriveIden)]
-enum Role {
+pub enum Role {
     Table,
     Id,
     Name,

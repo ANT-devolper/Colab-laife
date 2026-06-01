@@ -48,7 +48,7 @@ fn timestamp<T: IntoIden>(name: T) -> ColumnDef {
 }
 
 #[derive(DeriveIden)]
-enum Sector {
+pub enum Sector {
     Table,
     Id,
     Name,

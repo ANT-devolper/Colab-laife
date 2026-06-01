@@ -31,6 +31,10 @@ pub enum Resource {
     RoleCreate,
     RoleUpdate,
     RoleDelete,
+    CollaboratorRead,
+    CollaboratorCreate,
+    CollaboratorUpdate,
+    CollaboratorDelete,
 }
 
 impl Resource {
@@ -51,6 +55,10 @@ impl Resource {
             Self::RoleCreate => "role.create",
             Self::RoleUpdate => "role.update",
             Self::RoleDelete => "role.delete",
+            Self::CollaboratorRead => "collaborator.read",
+            Self::CollaboratorCreate => "collaborator.create",
+            Self::CollaboratorUpdate => "collaborator.update",
+            Self::CollaboratorDelete => "collaborator.delete",
         }
     }
 
@@ -71,6 +79,10 @@ impl Resource {
             Self::RoleCreate => "Create roles",
             Self::RoleUpdate => "Update roles",
             Self::RoleDelete => "Remove roles",
+            Self::CollaboratorRead => "View collaborators",
+            Self::CollaboratorCreate => "Create collaborators",
+            Self::CollaboratorUpdate => "Update collaborators",
+            Self::CollaboratorDelete => "Remove collaborators",
         }
     }
 
@@ -91,6 +103,10 @@ impl Resource {
             Self::RoleCreate,
             Self::RoleUpdate,
             Self::RoleDelete,
+            Self::CollaboratorRead,
+            Self::CollaboratorCreate,
+            Self::CollaboratorUpdate,
+            Self::CollaboratorDelete,
         ]
     }
 }

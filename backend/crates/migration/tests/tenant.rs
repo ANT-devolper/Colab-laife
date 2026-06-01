@@ -91,3 +91,13 @@ async fn tenant_migrations_create_the_role_table() {
         "expected tenant table `role` to exist"
     );
 }
+
+#[tokio::test]
+async fn tenant_migrations_create_the_collaborator_table() {
+    let db = setup().await;
+
+    assert!(
+        table_exists(&db, SCHEMA, "collaborator").await,
+        "expected tenant table `collaborator` to exist"
+    );
+}

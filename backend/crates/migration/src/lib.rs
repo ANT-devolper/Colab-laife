@@ -26,6 +26,7 @@ impl MigratorTrait for TenantMigrator {
             Box::new(tenant::m20260601_000003_create_permissions::Migration),
             Box::new(tenant::m20260601_000004_create_sector::Migration),
             Box::new(tenant::m20260601_000005_create_role::Migration),
+            Box::new(tenant::m20260601_000006_create_collaborator::Migration),
         ]
     }
 }

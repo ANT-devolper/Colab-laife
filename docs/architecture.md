@@ -25,9 +25,9 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors` and `/roles` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles CRUD |
-| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role` |
-| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles` and `/collaborators` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators CRUD |
+| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator` |
+| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
 
 The router is created by `build_router(db, database_url, jwt_secret)` in
@@ -56,9 +56,9 @@ Migrations are split accordingly in `backend/crates/migration/src/lib.rs`:
 - `PublicMigrator` — migrations for the `public` schema; run day-to-day via
   `cargo run -p migration`. Currently: create `organizations`, then `users`. ✅
 - `TenantMigrator` — migrations applied inside each tenant's schema, run by the tenant
-  provisioning flow. Currently: the RBAC tables (see Authorization) and the `sector` and
-  `role` tables (see Tenant domain). ✅ More tenant tables are appended as the domain model
-  grows. 🚧
+  provisioning flow. Currently: the RBAC tables (see Authorization) and the `sector`, `role`
+  and `collaborator` tables (see Tenant domain). ✅ More tenant tables are appended as the
+  domain model grows. 🚧
 
 ### Tenant provisioning
 
@@ -167,8 +167,17 @@ removal is a **soft delete** (`active = false`); listings filter to active rows.
   `observation`), `active` (soft-delete flag), timestamps. Exposed by `api::roles` as
   `GET`/`POST /roles` and `PATCH`/`DELETE /roles/{id}`, guarded by
   `role.{read,create,update,delete}`; `PATCH` updates only the fields present in the body. ✅
-- `collaborator` (with the `collaborator.user_id` ⟷ `public.users` link and the
-  sector/role/manager relations) is 🚧 planned next.
+- **`collaborator`** (`backend/crates/entity/src/collaborator.rs`, migration
+  `m20260601_000006_create_collaborator`) — the corporate record of a person: `id` (UUID),
+  `name`, optional `sector_id`/`role_id` FKs, an optional `manager_id` self-FK (the hierarchy),
+  `whatsapp`, `email`, `is_manager`, `date_of_hire`, `active` (soft-delete flag), timestamps.
+  The optional `user_id` links to the `public.users` login **by value** (no cross-schema FK,
+  the same approach as `permission_profile_users`). Exposed by `api::collaborators` as
+  `GET`/`POST /collaborators` and `PATCH`/`DELETE /collaborators/{id}`, guarded by
+  `collaborator.{read,create,update,delete}`; `create`/`update` reject a dangling
+  sector/role/manager reference with `422`, and `PATCH` updates only the fields present in the
+  body. The org-hierarchy/"accessible collaborators" service is 🚧 deferred (only the
+  `manager_id` column exists for now). ✅
 
 ## Health & operability
 

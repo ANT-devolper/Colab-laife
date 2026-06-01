@@ -139,3 +139,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   description fields → list → partial update preserving untouched fields → soft delete;
   permissionless member → `403`) plus a migration test (the `role` table lands in the migrated
   tenant schema).
+- Collaborators, the third tenant-domain resource (Phase 2): `TenantMigrator` now creates the
+  `collaborator` table — the corporate record of a person inside a tenant (`name`, optional
+  `sector_id`/`role_id` FKs, an optional `manager_id` self-FK for the hierarchy, `whatsapp`,
+  `email`, `is_manager`, `date_of_hire`, an `active` soft-delete flag and timestamps). The
+  optional `user_id` links a collaborator to its `public.users` login **by value** (no
+  cross-schema FK, like `permission_profile_users`). `entity::collaborator` maps it with
+  relations to sector, role and the self-referencing manager. The `Resource` catalog gains
+  `collaborator.{read,create,update,delete}` (auto-granted to the seeded administrator profile),
+  and `api::collaborators` exposes RBAC-guarded CRUD over the caller's tenant schema:
+  `GET`/`POST /collaborators`, `PATCH`/`DELETE /collaborators/{id}`. `create`/`update` validate
+  that any referenced sector/role/manager points at an existing active row (a dangling reference
+  → `422`); `PATCH` writes only the fields present in the body, and removal is a soft delete. The
+  org-hierarchy/"accessible collaborators" service is deferred — only the `manager_id` column
+  lands now. Integration-tested (admin create manager → report referencing it → list → partial
+  update preserving untouched FKs → soft delete; unknown sector and unknown manager → `422`;
+  permissionless member → `403`) plus a migration test (the `collaborator` table lands in the
+  migrated tenant schema).
