@@ -8,6 +8,7 @@ mod auth;
 pub mod extract;
 mod health;
 mod organizations;
+mod roles;
 mod sectors;
 mod users;
 
@@ -50,6 +51,8 @@ pub fn build_router(
             "/sectors/{id}",
             patch(sectors::update).delete(sectors::delete),
         )
+        .route("/roles", get(roles::list).post(roles::create))
+        .route("/roles/{id}", patch(roles::update).delete(roles::delete))
         .with_state(state)
 }
 

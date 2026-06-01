@@ -2,5 +2,6 @@
 
 pub mod organization;
 pub mod permission;
+pub mod role;
 pub mod sector;
 pub mod user;

@@ -81,3 +81,13 @@ async fn tenant_migrations_create_the_sector_table() {
         "expected tenant table `sector` to exist"
     );
 }
+
+#[tokio::test]
+async fn tenant_migrations_create_the_role_table() {
+    let db = setup().await;
+
+    assert!(
+        table_exists(&db, SCHEMA, "role").await,
+        "expected tenant table `role` to exist"
+    );
+}

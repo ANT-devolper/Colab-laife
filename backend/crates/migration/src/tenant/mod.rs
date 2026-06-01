@@ -3,3 +3,4 @@
 
 pub mod m20260601_000003_create_permissions;
 pub mod m20260601_000004_create_sector;
+pub mod m20260601_000005_create_role;

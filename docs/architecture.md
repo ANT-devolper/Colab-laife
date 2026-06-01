@@ -25,9 +25,9 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors CRUD |
-| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector` |
-| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors` and `/roles` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles CRUD |
+| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role` |
+| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
 
 The router is created by `build_router(db, database_url, jwt_secret)` in
@@ -56,8 +56,9 @@ Migrations are split accordingly in `backend/crates/migration/src/lib.rs`:
 - `PublicMigrator` — migrations for the `public` schema; run day-to-day via
   `cargo run -p migration`. Currently: create `organizations`, then `users`. ✅
 - `TenantMigrator` — migrations applied inside each tenant's schema, run by the tenant
-  provisioning flow. Currently: the RBAC tables (see Authorization) and the `sector` table
-  (see Tenant domain). ✅ More tenant tables are appended as the domain model grows. 🚧
+  provisioning flow. Currently: the RBAC tables (see Authorization) and the `sector` and
+  `role` tables (see Tenant domain). ✅ More tenant tables are appended as the domain model
+  grows. 🚧
 
 ### Tenant provisioning
 
@@ -160,8 +161,14 @@ removal is a **soft delete** (`active = false`); listings filter to active rows.
   timestamps. Exposed by `api::sectors` as `GET`/`POST /sectors` and `PATCH`/`DELETE
   /sectors/{id}`, guarded by `sector.{read,create,update,delete}`. It is the first domain
   resource living in the tenant schema. ✅
-- `role` and `collaborator` (with the `collaborator.user_id` ⟷ `public.users` link and the
-  sector/role/manager relations) are 🚧 planned next.
+- **`role`** (`backend/crates/entity/src/role.rs`, migration
+  `m20260601_000005_create_role`) — `id` (UUID), `name`, the legacy description fields (all
+  optional text: `profile_suggestion`, `objective`, the `requirement_*` breakdown and
+  `observation`), `active` (soft-delete flag), timestamps. Exposed by `api::roles` as
+  `GET`/`POST /roles` and `PATCH`/`DELETE /roles/{id}`, guarded by
+  `role.{read,create,update,delete}`; `PATCH` updates only the fields present in the body. ✅
+- `collaborator` (with the `collaborator.user_id` ⟷ `public.users` link and the
+  sector/role/manager relations) is 🚧 planned next.
 
 ## Health & operability
 

@@ -27,6 +27,10 @@ pub enum Resource {
     SectorCreate,
     SectorUpdate,
     SectorDelete,
+    RoleRead,
+    RoleCreate,
+    RoleUpdate,
+    RoleDelete,
 }
 
 impl Resource {
@@ -43,6 +47,10 @@ impl Resource {
             Self::SectorCreate => "sector.create",
             Self::SectorUpdate => "sector.update",
             Self::SectorDelete => "sector.delete",
+            Self::RoleRead => "role.read",
+            Self::RoleCreate => "role.create",
+            Self::RoleUpdate => "role.update",
+            Self::RoleDelete => "role.delete",
         }
     }
 
@@ -59,6 +67,10 @@ impl Resource {
             Self::SectorCreate => "Create sectors",
             Self::SectorUpdate => "Update sectors",
             Self::SectorDelete => "Remove sectors",
+            Self::RoleRead => "View roles",
+            Self::RoleCreate => "Create roles",
+            Self::RoleUpdate => "Update roles",
+            Self::RoleDelete => "Remove roles",
         }
     }
 
@@ -75,6 +87,10 @@ impl Resource {
             Self::SectorCreate,
             Self::SectorUpdate,
             Self::SectorDelete,
+            Self::RoleRead,
+            Self::RoleCreate,
+            Self::RoleUpdate,
+            Self::RoleDelete,
         ]
     }
 }

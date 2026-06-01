@@ -127,3 +127,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   active rows. This is the first domain route querying the tenant schema instead of `public`.
   Integration-tested (admin create → list → update → soft delete; permissionless member →
   `403`) plus a migration test (the `sector` table lands in the migrated tenant schema).
+- Roles, the second tenant-domain resource (Phase 2): `TenantMigrator` now creates the
+  `role` table with the full legacy description set (`name` plus optional `profile_suggestion`,
+  `objective`, the `requirement_*` breakdown — education, experience, attention, knowledge,
+  skill, attitude, delivery — and `observation`), an `active` soft-delete flag and timestamps;
+  `entity::role` maps it. The `Resource` catalog gains `role.{read,create,update,delete}`
+  (auto-granted to the seeded administrator profile), and `api::roles` exposes RBAC-guarded CRUD
+  over the caller's tenant schema: `GET`/`POST /roles`, `PATCH`/`DELETE /roles/{id}`. `PATCH`
+  writes only the fields present in the body (an omitted field is left untouched); removal is a
+  soft delete and lists are filtered to active rows. Integration-tested (admin create with
+  description fields → list → partial update preserving untouched fields → soft delete;
+  permissionless member → `403`) plus a migration test (the `role` table lands in the migrated
+  tenant schema).
