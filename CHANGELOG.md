@@ -84,3 +84,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `AppState` now also carries the `jwt_secret`; `build_router` takes
   `(db, database_url, jwt_secret)` and the API reads `JWT_SECRET` from the environment
   (dev-only default in the `justfile`). Integration-tested with `axum-test`.
+- Per-request tenant schema resolution in the `service` crate (`tenant::TenantRegistry`):
+  caches one `DatabaseConnection` per tenant schema (each pinned via
+  `set_schema_search_path`), resolving them by name on demand (see ADR 0009). The schema-name
+  validator is now shared between the registry and the provisioner (`is_valid_schema_name`).
+  Integration-tested (connection pinned to the requested schema, cache reuse, invalid name
+  rejected).

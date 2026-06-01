@@ -12,9 +12,10 @@ argon2.workspace = true
 jsonwebtoken.workspace = true
 serde.workspace = true
 uuid.workspace = true
+# `sync` (on top of the workspace features) for the registry's RwLock cache.
+tokio = { workspace = true, features = ["sync"] }
 
 [dev-dependencies]
-tokio.workspace = true
 testcontainers.workspace = true
 testcontainers-modules.workspace = true
 mockall.workspace = true

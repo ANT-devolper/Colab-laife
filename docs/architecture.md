@@ -26,7 +26,7 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 | `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations` and `POST /auth/login`. Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + login endpoints |
 | `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user` |
 | `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema |
-| `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication |
+| `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
 
 The router is created by `build_router(db, database_url, jwt_secret)` in
 `backend/crates/api/src/lib.rs`, which is kept separate from `main` so integration tests can
@@ -75,6 +75,20 @@ drops the new schema. Hardening is deferred.
 It is exposed over HTTP as `POST /organizations` (`backend/crates/api/src/organizations.rs`):
 `201` with the created organization and admin on success; `400` for an invalid name, `409`
 for a duplicate, `500` otherwise.
+
+### Per-request tenant resolution
+
+Once a tenant exists, each request reaches its schema through a `TenantRegistry`
+(`backend/crates/service/src/tenant.rs`), [ADR 0009](adr/0009-per-request-tenant-resolution.md): ✅
+
+- It caches one `DatabaseConnection` per schema (`RwLock<HashMap<schema, Arc<…>>>`), each
+  opened with `ConnectOptions::set_schema_search_path` — the same mechanism provisioning uses.
+- `connection(schema)` validates the name (shared `is_valid_schema_name`), returns the cached
+  connection or opens and caches a new one (double-checked, so one connection per schema).
+- It does not verify the schema exists; a missing schema surfaces as a later query error.
+
+The auth extractor that reads the tenant from the request's token and hands handlers this
+connection is 🚧 (see Authentication).
 
 ### Current data model (`public`)
 

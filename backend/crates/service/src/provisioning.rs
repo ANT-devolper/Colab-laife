@@ -4,6 +4,7 @@
 //! as a safe SQL identifier before being interpolated into DDL.
 
 use crate::password::hash_password;
+use crate::tenant::is_valid_schema_name;
 use entity::{organization, user};
 use migration::{MigratorTrait, TenantMigrator};
 use sea_orm::{
@@ -57,20 +58,6 @@ impl From<DbErr> for ProvisionError {
     fn from(error: DbErr) -> Self {
         Self::Db(error)
     }
-}
-
-/// `true` if `name` is a safe, unquoted PostgreSQL identifier we are willing to
-/// interpolate into `CREATE SCHEMA` (lowercase, starts with a letter, ≤ 63 chars).
-fn is_valid_schema_name(name: &str) -> bool {
-    let mut chars = name.chars();
-    match chars.next() {
-        Some(c) if c.is_ascii_lowercase() => {}
-        _ => return false,
-    }
-    name.len() <= 63
-        && name
-            .chars()
-            .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
 }
 
 /// Provisions a tenant. `database_url` is needed to open a connection whose
@@ -140,25 +127,4 @@ pub async fn provision_organization(
         organization,
         admin,
     })
-}
-
-#[cfg(test)]
-mod tests {
-    use super::is_valid_schema_name;
-
-    #[test]
-    fn accepts_safe_identifiers() {
-        assert!(is_valid_schema_name("acme"));
-        assert!(is_valid_schema_name("acme_corp_2"));
-    }
-
-    #[test]
-    fn rejects_unsafe_identifiers() {
-        assert!(!is_valid_schema_name(""));
-        assert!(!is_valid_schema_name("Acme")); // uppercase
-        assert!(!is_valid_schema_name("1acme")); // leading digit
-        assert!(!is_valid_schema_name("ac me")); // space
-        assert!(!is_valid_schema_name("ac\"me")); // quote
-        assert!(!is_valid_schema_name(&"a".repeat(64))); // too long
-    }
 }
