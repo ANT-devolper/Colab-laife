@@ -13,9 +13,10 @@ Elm frontend  ──HTTP/JSON──>  Axum backend  ──SeaORM──>  Postgre
 ```
 
 ✅ The backend skeleton (router + health probes), the cross-tenant schema, password hashing,
-tenant provisioning, credential login (JWT) and the authenticated request pipeline (per-request
-tenant resolution + auth extractor) exist today. 🚧 The Elm frontend, the RBAC permission guard,
-and the business modules and their endpoints are planned.
+tenant provisioning, credential login (JWT), the authenticated request pipeline (per-request
+tenant resolution + auth extractor) and granular RBAC (per-tenant permissions + per-route guard)
+exist today — the foundation is complete. 🚧 The Elm frontend and the business modules with
+their endpoints are planned.
 
 ## Backend workspace
 
@@ -24,7 +25,7 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login` and the authenticated `GET /auth/me` (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me` and the RBAC-guarded `GET /users` (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard |
 | `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*` |
 | `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
@@ -140,8 +141,12 @@ actions). A caller's permissions are the resources reachable via
 - Provisioning seeds a minimal resource catalog (`Resource::catalog()` in
   `service::permission` — user and RBAC management) plus an "administrator" profile that
   grants every resource, and links the tenant's admin user to it. ✅
-- The per-route guard `TenantContext::require(resource)` (admin bypass via the token, `403`
-  otherwise) is 🚧 planned.
+- The per-route guard is `TenantContext::require(resource)`: admins (the `is_admin` claim)
+  pass without a lookup; everyone else is checked against the chain via
+  `service::permission::has_permission`, returning `403` when the resource is not granted. ✅
+- `GET /users` (`backend/crates/api/src/users.rs`) is the first RBAC-guarded route: it
+  requires `user.read` and lists the caller organization's users. Authorization is checked
+  against the tenant schema; the listing reads identities from `public`. ✅
 
 ## Health & operability
 

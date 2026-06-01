@@ -4,7 +4,10 @@
 //! schema, and links the tenant's admin user to it (see ADR 0010).
 
 use entity::permission::{profile, profile_task, profile_user, resource, task, task_resource};
-use sea_orm::{ActiveModelTrait, ActiveValue::Set, DatabaseConnection, DbErr, TransactionTrait};
+use sea_orm::{
+    ActiveModelTrait, ActiveValue::Set, ConnectionTrait, DatabaseBackend, DatabaseConnection,
+    DbErr, Statement, TransactionTrait,
+};
 use uuid::Uuid;
 
 /// Name shared by the seeded "administrator" task and profile.
@@ -58,6 +61,29 @@ impl Resource {
             Self::ProfileManage,
         ]
     }
+}
+
+/// Whether `user_id` is granted `resource`, by walking
+/// `profile_users → profile_tasks → task_resources → resources` in the tenant
+/// schema. `conn` must target the tenant's `search_path`. The admin bypass is
+/// applied by the caller (the guard), not here.
+pub async fn has_permission(
+    conn: &impl ConnectionTrait,
+    user_id: Uuid,
+    resource: Resource,
+) -> Result<bool, DbErr> {
+    let stmt = Statement::from_sql_and_values(
+        DatabaseBackend::Postgres,
+        "SELECT 1 \
+         FROM permission_profile_users pu \
+         JOIN permission_profile_tasks pt ON pt.profile_id = pu.profile_id \
+         JOIN permission_task_resources tr ON tr.task_id = pt.task_id \
+         JOIN permission_resources r ON r.id = tr.resource_id \
+         WHERE pu.user_id = $1 AND r.name = $2 \
+         LIMIT 1",
+        [user_id.into(), resource.name().to_owned().into()],
+    );
+    Ok(conn.query_one(stmt).await?.is_some())
 }
 
 /// Seeds the resource catalog plus an "administrator" profile that grants every

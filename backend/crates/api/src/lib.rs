@@ -8,6 +8,7 @@ mod auth;
 pub mod extract;
 mod health;
 mod organizations;
+mod users;
 
 /// Shared, cheaply cloneable application state. `DatabaseConnection` is not
 /// `Clone`, so it lives behind an `Arc`; `database_url` lets handlers open the
@@ -42,6 +43,7 @@ pub fn build_router(
         .route("/organizations", post(organizations::create))
         .route("/auth/login", post(auth::login))
         .route("/auth/me", get(auth::me))
+        .route("/users", get(users::list))
         .with_state(state)
 }
 

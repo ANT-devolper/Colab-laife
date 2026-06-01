@@ -111,3 +111,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the tenant schema on any failure after its creation (not just migration). Unit-tested
   (catalog identifiers/uniqueness) and integration-tested (catalog seeded, admin holds the
   profile).
+- RBAC enforcement: `service::permission::has_permission` walks
+  `profile_users → profile_tasks → task_resources → resources` in the tenant schema, and the
+  `TenantContext::require(resource)` guard authorizes a route (admins bypass via the token;
+  others are checked, `403` when not granted). `GET /users` is the first guarded route —
+  requires `user.read` and lists the caller organization's users. Integration-tested
+  (`has_permission` for a linked admin vs an unlinked user; `GET /users` `200` for the admin,
+  `403` for a permissionless member). Completes the Phase 1 foundation (see ADR 0010).

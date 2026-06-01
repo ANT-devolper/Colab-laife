@@ -12,9 +12,11 @@ use axum::http::request::Parts;
 use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum::Json;
+use sea_orm::prelude::Uuid;
 use sea_orm::DatabaseConnection;
 use serde_json::json;
 use service::auth::{decode_token, Claims};
+use service::permission::{has_permission, Resource};
 
 use crate::AppState;
 
@@ -25,16 +27,38 @@ pub struct TenantContext {
     pub tenant_db: Arc<DatabaseConnection>,
 }
 
-/// Why authentication failed. Token problems are `401`; an unreachable tenant
-/// connection is an internal `500`.
+impl TenantContext {
+    /// Authorizes the caller for `resource`, returning `Forbidden` (`403`) if
+    /// not. Admins (`is_admin` in the token) are allowed without a lookup;
+    /// everyone else is checked against the tenant's RBAC chain.
+    pub async fn require(&self, resource: Resource) -> Result<(), AuthRejection> {
+        if self.claims.is_admin {
+            return Ok(());
+        }
+        // `sub` is our own signed claim; a malformed one is a server-side fault.
+        let user_id = Uuid::parse_str(&self.claims.sub).map_err(|_| AuthRejection::Internal)?;
+        match has_permission(self.tenant_db.as_ref(), user_id, resource).await {
+            Ok(true) => Ok(()),
+            Ok(false) => Err(AuthRejection::Forbidden),
+            Err(_) => Err(AuthRejection::Internal),
+        }
+    }
+}
+
+/// Why a request was refused. Token problems are `401`, a lacking permission is
+/// `403`, and infrastructure failures are `500`.
 #[derive(Debug)]
 pub enum AuthRejection {
     /// No `Authorization` header, or not a `Bearer` token.
     MissingToken,
     /// The token failed signature or expiry validation.
     InvalidToken,
+    /// Authenticated, but lacking the required permission.
+    Forbidden,
     /// The tenant connection could not be resolved.
     TenantUnavailable,
+    /// A downstream failure (e.g. a database query, or a malformed own claim).
+    Internal,
 }
 
 impl IntoResponse for AuthRejection {
@@ -45,7 +69,9 @@ impl IntoResponse for AuthRejection {
                 "missing or malformed Authorization header",
             ),
             Self::InvalidToken => (StatusCode::UNAUTHORIZED, "invalid or expired token"),
+            Self::Forbidden => (StatusCode::FORBIDDEN, "insufficient permissions"),
             Self::TenantUnavailable => (StatusCode::INTERNAL_SERVER_ERROR, "tenant unavailable"),
+            Self::Internal => (StatusCode::INTERNAL_SERVER_ERROR, "internal error"),
         };
         (status, Json(json!({ "error": message }))).into_response()
     }
