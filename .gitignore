@@ -1,9 +1,29 @@
 # Reference system being reimplemented — never commit it
 colab-life-test/
 
-# Rust
-/target
+# Rust (Cargo.lock IS committed — this is an application)
+target/
 **/*.rs.bk
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Elm
+elm-stuff/
+
+# Frontend build output
+frontend/dist/
+
+# Playwright
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+e2e/.last-run.json
+
+# Environment
+.env
+.env.local
 
 # OS / editor noise
 .DS_Store

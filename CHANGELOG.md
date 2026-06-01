@@ -19,3 +19,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   testcontainers (backend integration), elm-test (frontend unit), Playwright (E2E).
 - `.gitignore` ignoring the reference system `colab-life-test/` and Rust/editor artifacts.
 - This `CHANGELOG.md`.
+- Development environment scaffold (structure and manifests only, no feature code):
+  - Backend Cargo workspace (`backend/`) with crates `api`, `entity`, `migration`,
+    `service`; pinned deps centralized in `[workspace.dependencies]`; committed
+    `Cargo.lock`. Migrations run via `cargo run -p migration` (no global sea-orm-cli).
+  - Frontend Elm app (`frontend/`) with `elm.json`, `elm-test`, and `elm-format` pinned.
+  - E2E suite (`e2e/`) with Playwright and a multi-browser `playwright.config.ts`.
+  - `rust-toolchain.toml` (1.95.0), `docker-compose.yml` (PostgreSQL 16.14), and a
+    `justfile` (`setup`/`test`/`run`/`migrate`/`fmt`/`db-up`/`db-down`).
+  - `CONTRIBUTING.md` with the pinned-version table and reproducible setup steps.
+  - `.gitignore` extended for Node, Elm, Playwright, and build artifacts.

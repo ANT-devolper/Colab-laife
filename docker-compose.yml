@@ -1,0 +1,22 @@
+# Development PostgreSQL. The image tag is pinned and must match the one used by the
+# integration tests (testcontainers).
+services:
+  postgres:
+    image: postgres:16.14
+    container_name: colab-life-postgres
+    environment:
+      POSTGRES_USER: colab
+      POSTGRES_PASSWORD: colab
+      POSTGRES_DB: colab_life
+    ports:
+      - "5432:5432"
+    volumes:
+      - colab-life-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U colab -d colab_life"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  colab-life-pgdata:

@@ -1,0 +1,18 @@
+{
+  "name": "colab-life-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ColabLife frontend (Elm)",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "elm-test",
+    "format": "elm-format src/ tests/ --validate"
+  },
+  "devDependencies": {
+    "elm": "0.19.1-6",
+    "elm-test": "0.19.1-revision17",
+    "elm-format": "0.8.8"
+  }
+}

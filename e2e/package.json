@@ -1,0 +1,15 @@
+{
+  "name": "colab-life-e2e",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ColabLife end-to-end tests (Playwright)",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.60.0"
+  }
+}
