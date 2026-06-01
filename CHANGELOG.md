@@ -29,3 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     `justfile` (`setup`/`test`/`run`/`migrate`/`fmt`/`db-up`/`db-down`).
   - `CONTRIBUTING.md` with the pinned-version table and reproducible setup steps.
   - `.gitignore` extended for Node, Elm, Playwright, and build artifacts.
+- Backend walking skeleton: `api` crate now exposes `build_router` and two probes —
+  `GET /health` (liveness, no database) and `GET /health/ready` (readiness, pings
+  PostgreSQL via SeaORM, `200`/`503`). Covered by a unit test (mock connection, no Docker)
+  and an integration test (throwaway PostgreSQL via testcontainers). The `api` crate now
+  depends on `sea-orm`; `main` wires tracing, the database connection, and the HTTP server.
