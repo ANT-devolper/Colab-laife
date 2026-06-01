@@ -58,6 +58,22 @@ overrides any request to the contrary:
 **Every meaningful point of the implementation must be recorded in `CHANGELOG.md`**
 (Keep a Changelog format), in the same task as the change, **before the commit**.
 
+## Documentation — mandatory
+
+The project documentation lives in `README.md` (an index), `CONTRIBUTING.md` (setup) and
+`docs/` (`architecture.md`, `domain/`, `adr/`). Like the CHANGELOG, it must be kept in sync
+**in the same task as the change, before the commit**:
+
+1. A change that affects the **architecture**, an **API contract**, or a **business
+   module's behavior** updates the relevant page under `docs/` (and the architecture
+   `Status` markers) in the same task.
+2. A new meaningful **architectural decision** gets a new ADR under `docs/adr/` (next
+   number, template in `docs/adr/README.md`); decisions are superseded, never edited once
+   Accepted.
+3. Docs must not overstate the code: mark **planned vs. implemented** explicitly.
+4. Do not duplicate — setup/pinned versions live only in `CONTRIBUTING.md`; the process
+   lives only here. Other pages link to them.
+
 ## Commit messages — Conventional Commits
 
 - Format: `type(scope): description` (scope optional).
@@ -75,7 +91,8 @@ Example: `feat(auth): add refresh token via cookie`
 
 1. Run the full test suite → ensure it is green.
 2. Update `CHANGELOG.md`.
-3. Commit (Conventional Commits, in English).
+3. Update the relevant documentation in `docs/` (and add an ADR) when applicable.
+4. Commit (Conventional Commits, in English).
 
 Work is done **directly on `main`** for now (no feature branches). Claude **commits
 automatically** once the flow above is satisfied. **Pushing is manual — only the user

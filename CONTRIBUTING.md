@@ -16,6 +16,7 @@ backend/      Rust Cargo workspace
     service/    business logic / domain services
 frontend/     Elm application (elm-test for unit tests)
 e2e/          Playwright end-to-end tests
+docs/         in-depth documentation (architecture, domain modules, ADRs)
 docker-compose.yml   dev PostgreSQL
 justfile      task runner (setup / test / run / migrate / fmt / db-up / db-down)
 ```

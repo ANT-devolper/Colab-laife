@@ -9,6 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Project documentation structure: `README.md` rewritten as an index (pitch, status,
+  stack, minimal quickstart, links) and a `docs/` directory with `architecture.md`
+  (system overview, crates, schema-per-tenant multi-tenancy, health probes, testing;
+  planned-vs-implemented markers), `docs/domain/` (index, glossary and a page per business
+  module from a common template), and `docs/adr/` (template plus ADRs 0001–0006 recording
+  decisions already taken: ADRs themselves, Rust+Axum, SeaORM/PostgreSQL, multi-tenant
+  schema-per-tenant, Elm, Argon2). `CONTRIBUTING.md` layout updated to list `docs/`.
+- Mandatory documentation directive in `CLAUDE.md` ("Documentation — mandatory"): changes
+  affecting architecture, API contracts or module behavior must update `docs/` in the same
+  task before the commit, with a new ADR for meaningful architectural decisions; the commit
+  flow now includes the docs step.
 - Project guidelines and development process (XP pair programming, TDD with
   Red → Green → Refactor, no-regression rule, regression test for every bug, mandatory
   CHANGELOG, Conventional Commits) in `CLAUDE.md`.

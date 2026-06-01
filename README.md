@@ -1,1 +1,49 @@
 # Colab-laife
+
+A from-scratch reimplementation of **ColabLife** — a multi-tenant enterprise SaaS for
+people operations: notes/feedback, DISC assessment, dashboard, employees, tasks,
+recruitment, a whistleblower channel and a climate survey.
+
+## Status
+
+**Early development — walking skeleton.** What exists today:
+
+- HTTP liveness/readiness health probes (Axum).
+- `organizations` and `users` tables/entities in the cross-tenant `public` schema.
+- Argon2 password hashing in the `service` crate.
+
+The eight business modules above are **planned** — see [`docs/domain/`](docs/domain/) for
+their intended scope.
+
+## Stack
+
+- **Backend:** Rust + [Axum](https://github.com/tokio-rs/axum), persistence with
+  [SeaORM](https://www.sea-ql.org/SeaORM/) over PostgreSQL.
+- **Frontend:** [Elm](https://elm-lang.org/) (HTTP/JSON).
+- **Deploy target / mobile:** TBD.
+
+## Quickstart
+
+```bash
+git clone <repo> && cd Colab-laife
+just setup     # build backend, install frontend & e2e deps, download browsers
+just test      # backend (cargo test) + frontend (elm-test) + e2e (playwright)
+just run       # start the backend API
+```
+
+Prerequisites, pinned versions and database commands live in
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+## Documentation
+
+- [`docs/`](docs/) — documentation map (start here).
+- [`docs/architecture.md`](docs/architecture.md) — system overview, crates, multi-tenancy.
+- [`docs/domain/`](docs/domain/) — the business modules and glossary.
+- [`docs/adr/`](docs/adr/) — Architecture Decision Records (why we chose what we chose).
+
+## Contributing
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) for setup and [`CLAUDE.md`](CLAUDE.md) for the
+mandatory process (XP pair programming, TDD Red→Green→Refactor, full suite green before
+every commit, mandatory CHANGELOG and documentation updates, Conventional Commits).
+Changes are recorded in [`CHANGELOG.md`](CHANGELOG.md).
