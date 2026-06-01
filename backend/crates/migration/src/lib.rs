@@ -8,9 +8,10 @@ pub struct PublicMigrator;
 
 impl MigratorTrait for PublicMigrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        vec![Box::new(
-            public::m20260601_000001_create_organizations::Migration,
-        )]
+        vec![
+            Box::new(public::m20260601_000001_create_organizations::Migration),
+            Box::new(public::m20260601_000002_create_users::Migration),
+        ]
     }
 }
 

@@ -41,3 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   doubling as schema slug, plan, due date, employee limit, active flag, timestamps). Covered
   by integration tests (persist + default columns, unique-name constraint). Enabled SeaORM
   `with-uuid`/`with-chrono` and pinned `uuid` (v4) in the workspace.
+- `users` table and entity in the public schema: login identity (id, name, globally unique
+  email, password_hash, is_admin, soft-delete) belonging to an organization via a
+  `organization_id` foreign key. Covered by integration tests (defaults + ownership, unique
+  email, foreign-key enforcement).
