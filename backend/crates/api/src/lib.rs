@@ -1,4 +1,4 @@
-use axum::routing::{get, post};
+use axum::routing::{get, patch, post};
 use axum::Router;
 use sea_orm::DatabaseConnection;
 use service::tenant::TenantRegistry;
@@ -8,6 +8,7 @@ mod auth;
 pub mod extract;
 mod health;
 mod organizations;
+mod sectors;
 mod users;
 
 /// Shared, cheaply cloneable application state. `DatabaseConnection` is not
@@ -44,6 +45,11 @@ pub fn build_router(
         .route("/auth/login", post(auth::login))
         .route("/auth/me", get(auth::me))
         .route("/users", get(users::list))
+        .route("/sectors", get(sectors::list).post(sectors::create))
+        .route(
+            "/sectors/{id}",
+            patch(sectors::update).delete(sectors::delete),
+        )
         .with_state(state)
 }
 

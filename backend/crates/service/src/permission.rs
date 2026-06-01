@@ -23,6 +23,10 @@ pub enum Resource {
     UserDelete,
     ProfileRead,
     ProfileManage,
+    SectorRead,
+    SectorCreate,
+    SectorUpdate,
+    SectorDelete,
 }
 
 impl Resource {
@@ -35,6 +39,10 @@ impl Resource {
             Self::UserDelete => "user.delete",
             Self::ProfileRead => "profile.read",
             Self::ProfileManage => "profile.manage",
+            Self::SectorRead => "sector.read",
+            Self::SectorCreate => "sector.create",
+            Self::SectorUpdate => "sector.update",
+            Self::SectorDelete => "sector.delete",
         }
     }
 
@@ -47,6 +55,10 @@ impl Resource {
             Self::UserDelete => "Remove users",
             Self::ProfileRead => "View profiles",
             Self::ProfileManage => "Manage profiles",
+            Self::SectorRead => "View sectors",
+            Self::SectorCreate => "Create sectors",
+            Self::SectorUpdate => "Update sectors",
+            Self::SectorDelete => "Remove sectors",
         }
     }
 
@@ -59,6 +71,10 @@ impl Resource {
             Self::UserDelete,
             Self::ProfileRead,
             Self::ProfileManage,
+            Self::SectorRead,
+            Self::SectorCreate,
+            Self::SectorUpdate,
+            Self::SectorDelete,
         ]
     }
 }

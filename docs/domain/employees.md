@@ -1,6 +1,6 @@
 # Employees
 
-> **Status:** 🚧 planned — not implemented yet.
+> **Status:** 🚧 partially implemented — `sector` exists; `role` and `collaborator` are planned.
 
 ## Purpose
 
@@ -9,9 +9,15 @@ most other modules attach to (notes, feedback, DISC, tasks).
 
 ## Key concepts / entities
 
-- **Employee** — a person managed inside a tenant. Distinct from **user** (a login
-  identity in `public.users`); the employee↔user mapping is part of this module's design.
-- Employee attributes (role, department, status, hire date) are defined when designed.
+- **Sector** — an organizational unit (department) inside a tenant. ✅ Implemented as the
+  `sector` table in the tenant schema (`id`, `name`, `active`, timestamps), with RBAC-guarded
+  CRUD at `/sectors` (`sector.{read,create,update,delete}`); removal is a soft delete.
+- **Role** (`role`) — a job title with the legacy description fields (objective, requirements,
+  observations). 🚧 Planned.
+- **Collaborator** — a person managed inside a tenant. Distinct from **user** (a login
+  identity in `public.users`); the collaborator↔user link is by value (`user_id`, no
+  cross-schema FK), and a collaborator references its sector, role and manager (self-FK).
+  🚧 Planned.
 
 ## Main flows
 
@@ -26,7 +32,8 @@ most other modules attach to (notes, feedback, DISC, tasks).
 
 ## Status
 
-Planned. Lives in the tenant schema once the `TenantMigrator` grows tables.
+Partially implemented. The module's tables live in the tenant schema (`TenantMigrator`):
+`sector` exists with its RBAC-guarded CRUD; `role` and `collaborator` are next.
 
 ## Reference
 

@@ -22,8 +22,9 @@ pub struct TenantMigrator;
 
 impl MigratorTrait for TenantMigrator {
     fn migrations() -> Vec<Box<dyn MigrationTrait>> {
-        vec![Box::new(
-            tenant::m20260601_000003_create_permissions::Migration,
-        )]
+        vec![
+            Box::new(tenant::m20260601_000003_create_permissions::Migration),
+            Box::new(tenant::m20260601_000004_create_sector::Migration),
+        ]
     }
 }

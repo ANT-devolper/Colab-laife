@@ -71,3 +71,13 @@ async fn tenant_migrations_create_the_rbac_tables() {
         );
     }
 }
+
+#[tokio::test]
+async fn tenant_migrations_create_the_sector_table() {
+    let db = setup().await;
+
+    assert!(
+        table_exists(&db, SCHEMA, "sector").await,
+        "expected tenant table `sector` to exist"
+    );
+}

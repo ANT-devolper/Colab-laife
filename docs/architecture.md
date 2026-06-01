@@ -15,8 +15,8 @@ Elm frontend  ──HTTP/JSON──>  Axum backend  ──SeaORM──>  Postgre
 ✅ The backend skeleton (router + health probes), the cross-tenant schema, password hashing,
 tenant provisioning, credential login (JWT), the authenticated request pipeline (per-request
 tenant resolution + auth extractor) and granular RBAC (per-tenant permissions + per-route guard)
-exist today — the foundation is complete. 🚧 The Elm frontend and the business modules with
-their endpoints are planned.
+exist today — the foundation is complete, and the first tenant-domain resource (`sectors`) is in
+place. 🚧 The Elm frontend and the remaining business modules with their endpoints are planned.
 
 ## Backend workspace
 
@@ -25,9 +25,9 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me` and the RBAC-guarded `GET /users` (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard |
-| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*` |
-| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors CRUD |
+| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector` |
+| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
 
 The router is created by `build_router(db, database_url, jwt_secret)` in
@@ -56,8 +56,8 @@ Migrations are split accordingly in `backend/crates/migration/src/lib.rs`:
 - `PublicMigrator` — migrations for the `public` schema; run day-to-day via
   `cargo run -p migration`. Currently: create `organizations`, then `users`. ✅
 - `TenantMigrator` — migrations applied inside each tenant's schema, run by the tenant
-  provisioning flow. Currently: the RBAC tables (see Authorization). ✅ More tenant tables
-  are appended as the domain model grows. 🚧
+  provisioning flow. Currently: the RBAC tables (see Authorization) and the `sector` table
+  (see Tenant domain). ✅ More tenant tables are appended as the domain model grows. 🚧
 
 ### Tenant provisioning
 
@@ -147,6 +147,21 @@ actions). A caller's permissions are the resources reachable via
 - `GET /users` (`backend/crates/api/src/users.rs`) is the first RBAC-guarded route: it
   requires `user.read` and lists the caller organization's users. Authorization is checked
   against the tenant schema; the listing reads identities from `public`. ✅
+
+## Tenant domain (Cadastro)
+
+The business domain tables live in the **tenant schema** (created by `TenantMigrator`), so
+their handlers query the per-request connection from `TenantContext` (`ctx.tenant_db`) rather
+than `public` (`state.db`). Every route runs `ctx.require(resource)` before any query, and
+removal is a **soft delete** (`active = false`); listings filter to active rows.
+
+- **`sector`** (`backend/crates/entity/src/sector.rs`, migration
+  `m20260601_000004_create_sector`) — `id` (UUID), `name`, `active` (soft-delete flag),
+  timestamps. Exposed by `api::sectors` as `GET`/`POST /sectors` and `PATCH`/`DELETE
+  /sectors/{id}`, guarded by `sector.{read,create,update,delete}`. It is the first domain
+  resource living in the tenant schema. ✅
+- `role` and `collaborator` (with the `collaborator.user_id` ⟷ `public.users` link and the
+  sector/role/manager relations) are 🚧 planned next.
 
 ## Health & operability
 

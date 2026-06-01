@@ -118,3 +118,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   requires `user.read` and lists the caller organization's users. Integration-tested
   (`has_permission` for a linked admin vs an unlinked user; `GET /users` `200` for the admin,
   `403` for a permissionless member). Completes the Phase 1 foundation (see ADR 0010).
+- Sectors, the first tenant-domain resource (Phase 2): `TenantMigrator` now creates the
+  `sector` table (id, name, `active` soft-delete flag, timestamps) and `entity::sector` maps
+  it. The `Resource` catalog gains `sector.{read,create,update,delete}` (auto-granted to the
+  seeded administrator profile), and `api::sectors` exposes RBAC-guarded CRUD over the
+  caller's tenant schema (`ctx.tenant_db`): `GET`/`POST /sectors`, `PATCH`/`DELETE
+  /sectors/{id}`, with removal as a soft delete (`active = false`) and lists filtered to
+  active rows. This is the first domain route querying the tenant schema instead of `public`.
+  Integration-tested (admin create → list → update → soft delete; permissionless member →
+  `403`) plus a migration test (the `sector` table lands in the migrated tenant schema).
