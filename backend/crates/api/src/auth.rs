@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use service::auth::{authenticate, encode_token, AuthError, Authenticated, Claims, DEFAULT_TTL};
 
+use crate::extract::TenantContext;
 use crate::AppState;
 
 #[derive(Deserialize)]
@@ -68,4 +69,16 @@ pub async fn login(
         )
             .into_response(),
     }
+}
+
+/// `GET /auth/me` — returns the authenticated caller's identity, drawn from the
+/// verified token. Requires a valid `Authorization: Bearer` token (`401`
+/// otherwise, via the `TenantContext` extractor).
+pub async fn me(ctx: TenantContext) -> impl IntoResponse {
+    Json(json!({
+        "user_id": ctx.claims.sub,
+        "organization_id": ctx.claims.org,
+        "schema": ctx.claims.schema,
+        "is_admin": ctx.claims.is_admin,
+    }))
 }

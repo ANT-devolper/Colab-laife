@@ -90,3 +90,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validator is now shared between the registry and the provisioner (`is_valid_schema_name`).
   Integration-tested (connection pinned to the requested schema, cache reuse, invalid name
   rejected).
+- Authentication extractor `TenantContext` (`api::extract`, `FromRequestParts`): turns an
+  `Authorization: Bearer <jwt>` header into verified `Claims` plus a connection to the caller's
+  tenant schema (resolved via the `TenantRegistry`). Missing/malformed/invalid/expired token →
+  `401`; an unreachable tenant → `500`. Handlers opt into auth by taking it as an argument;
+  routes that omit it stay public. `AppState`/`build_router` now build and carry the
+  `TenantRegistry` (see ADR 0009). Unit-tested (bearer parsing/validation, no Docker).
+- `GET /auth/me`: first protected route, returns the caller's identity
+  (`{ user_id, organization_id, schema, is_admin }`) from the verified token. Integration-tested
+  with `axum-test` (valid token → identity, missing token → `401`, wrong-secret token → `401`).

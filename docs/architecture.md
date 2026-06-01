@@ -13,8 +13,9 @@ Elm frontend  ──HTTP/JSON──>  Axum backend  ──SeaORM──>  Postgre
 ```
 
 ✅ The backend skeleton (router + health probes), the cross-tenant schema, password hashing,
-tenant provisioning and credential login (JWT) exist today. 🚧 The Elm frontend, the auth
-middleware, and the business modules and their endpoints are planned.
+tenant provisioning, credential login (JWT) and the authenticated request pipeline (per-request
+tenant resolution + auth extractor) exist today. 🚧 The Elm frontend, the RBAC permission guard,
+and the business modules and their endpoints are planned.
 
 ## Backend workspace
 
@@ -23,7 +24,7 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations` and `POST /auth/login`. Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + login endpoints |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login` and the authenticated `GET /auth/me` (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor |
 | `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user` |
 | `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
@@ -87,8 +88,8 @@ Once a tenant exists, each request reaches its schema through a `TenantRegistry`
   connection or opens and caches a new one (double-checked, so one connection per schema).
 - It does not verify the schema exists; a missing schema surfaces as a later query error.
 
-The auth extractor that reads the tenant from the request's token and hands handlers this
-connection is 🚧 (see Authentication).
+The auth extractor (`TenantContext`) reads the tenant from the request's token and hands
+handlers this connection (see Authentication). ✅
 
 ### Current data model (`public`)
 
@@ -112,10 +113,16 @@ Authentication is native and **stateless** ([ADR 0008](adr/0008-stateless-jwt-se
   collapse to one `InvalidCredentials` outcome (no user enumeration); a valid user whose
   organization is inactive yields `OrganizationInactive`.
 - The token carries `Claims { sub, org, schema, is_admin, exp }` (HS256, signed with
-  `JWT_SECRET`, 24h expiry). `schema` lets the planned auth middleware resolve the tenant
-  from the token alone. Encoding/decoding live in `service::auth`
-  (`encode_token` / `decode_token`); the middleware that enforces them on protected routes is
-  🚧 planned.
+  `JWT_SECRET`, 24h expiry). `schema` lets the auth extractor resolve the tenant from the
+  token alone. Encoding/decoding live in `service::auth` (`encode_token` / `decode_token`).
+- Protected routes take the `TenantContext` extractor
+  (`backend/crates/api/src/extract.rs`, `FromRequestParts`): it reads
+  `Authorization: Bearer <jwt>`, validates it, and resolves the tenant connection from the
+  `TenantRegistry`. Missing/malformed/invalid/expired token → `401`; an unreachable tenant
+  connection → `500`. Routes that omit the extractor stay public. ✅
+- `GET /auth/me` is the first protected route: it returns the caller's identity
+  (`{ user_id, organization_id, schema, is_admin }`) from the verified token.
+- A per-route **RBAC permission guard** building on `TenantContext` is 🚧 planned.
 
 ## Health & operability
 

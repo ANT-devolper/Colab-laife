@@ -1,20 +1,24 @@
 use axum::routing::{get, post};
 use axum::Router;
 use sea_orm::DatabaseConnection;
+use service::tenant::TenantRegistry;
 use std::sync::Arc;
 
 mod auth;
+pub mod extract;
 mod health;
 mod organizations;
 
 /// Shared, cheaply cloneable application state. `DatabaseConnection` is not
 /// `Clone`, so it lives behind an `Arc`; `database_url` lets handlers open the
-/// search-path connections that tenant provisioning needs; `jwt_secret` signs
-/// and verifies session tokens.
+/// search-path connections that tenant provisioning needs; `tenants` resolves a
+/// per-request connection to the caller's tenant schema; `jwt_secret` signs and
+/// verifies session tokens.
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<DatabaseConnection>,
     pub database_url: Arc<str>,
+    pub tenants: Arc<TenantRegistry>,
     pub jwt_secret: Arc<[u8]>,
 }
 
@@ -25,9 +29,11 @@ pub fn build_router(
     database_url: impl Into<String>,
     jwt_secret: impl Into<Vec<u8>>,
 ) -> Router {
+    let database_url = database_url.into();
     let state = AppState {
         db: Arc::new(db),
-        database_url: Arc::from(database_url.into()),
+        database_url: Arc::from(database_url.clone()),
+        tenants: Arc::new(TenantRegistry::new(database_url)),
         jwt_secret: Arc::from(jwt_secret.into()),
     };
     Router::new()
@@ -35,6 +41,7 @@ pub fn build_router(
         .route("/health/ready", get(health::ready))
         .route("/organizations", post(organizations::create))
         .route("/auth/login", post(auth::login))
+        .route("/auth/me", get(auth::me))
         .with_state(state)
 }
 
