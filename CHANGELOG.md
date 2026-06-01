@@ -60,3 +60,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (PHC strings, per-password random salt). Unit-tested (round-trip, wrong-password rejection,
   salt randomness, malformed-hash handling); no Docker required. Pinned `argon2` in the
   workspace.
+- Tenant provisioning in the `service` crate (`provision_organization`): validates the
+  organization name as a safe schema slug, creates and migrates the tenant's dedicated
+  PostgreSQL schema (`TenantMigrator` over a `search_path` connection), and persists the
+  organization plus its Argon2-hashed admin in one public-schema transaction. Cross-step
+  atomicity is best-effort (see ADR 0007). Integration-tested end to end (schema created and
+  migrated, admin loggable, duplicate and unsafe names rejected).

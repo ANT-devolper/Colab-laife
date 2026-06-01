@@ -3112,10 +3112,15 @@ version = "0.1.0"
 dependencies = [
  "argon2",
  "entity",
+ "migration",
  "mockall",
  "pretty_assertions",
  "rstest",
  "sea-orm",
+ "testcontainers",
+ "testcontainers-modules",
+ "tokio",
+ "uuid",
 ]
 
 [[package]]

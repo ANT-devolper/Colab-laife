@@ -19,6 +19,7 @@ update the old one's status to *Superseded by NNNN*.
 | [0004](0004-multi-tenant-schema-per-tenant.md) | Multi-tenancy: schema per tenant | Accepted |
 | [0005](0005-frontend-elm.md) | Frontend in Elm | Accepted |
 | [0006](0006-password-hashing-argon2.md) | Password hashing with Argon2 | Accepted |
+| [0007](0007-tenant-provisioning.md) | Tenant provisioning and schema resolution | Accepted |
 
 ## Template
 

@@ -6,10 +6,15 @@ rust-version.workspace = true
 
 [dependencies]
 entity = { path = "../entity" }
+migration = { path = "../migration" }
 sea-orm.workspace = true
 argon2.workspace = true
+uuid.workspace = true
 
 [dev-dependencies]
+tokio.workspace = true
+testcontainers.workspace = true
+testcontainers-modules.workspace = true
 mockall.workspace = true
 rstest.workspace = true
 pretty_assertions.workspace = true

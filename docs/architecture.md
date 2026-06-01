@@ -26,7 +26,7 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 | `api` | Axum HTTP app: builds the router, wires shared state, serves the probes. Entry point in `main`; routes in `build_router`. | ✅ skeleton |
 | `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user` |
 | `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema |
-| `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing |
+| `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning |
 
 The router is created by `build_router(db)` in `backend/crates/api/src/lib.rs`, which is
 kept separate from `main` so integration tests can drive the real routes over HTTP. Shared
@@ -53,6 +53,21 @@ Migrations are split accordingly in `backend/crates/migration/src/lib.rs`:
 - `TenantMigrator` — migrations applied inside each tenant's schema, run by the tenant
   provisioning flow. Currently empty; tenant tables are appended as the domain model
   grows. 🚧
+
+### Tenant provisioning
+
+`service::provisioning::provision_organization` turns a request for a new tenant into a
+migrated schema plus an admin user ([ADR 0007](adr/0007-tenant-provisioning.md)): ✅ (service
+level; HTTP endpoint 🚧)
+
+1. Validate the organization `name` as a safe SQL identifier (it doubles as the schema slug).
+2. `CREATE SCHEMA`, then run `TenantMigrator` against a connection whose `search_path` points
+   at it (SeaORM `ConnectOptions::set_schema_search_path`). This same option is how a tenant
+   schema is targeted, including the planned per-request resolver.
+3. Insert the organization and its Argon2-hashed admin user in one `public` transaction.
+
+Cross-step atomicity is best-effort (schema DDL is non-transactional); a failed migration
+drops the new schema. Hardening is deferred.
 
 ### Current data model (`public`)
 
