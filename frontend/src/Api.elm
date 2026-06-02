@@ -9,6 +9,8 @@ module Api exposing
     , createSector, updateSector, deleteSector
     , RoleForm, emptyRoleForm, roleFormFromRole, encodeRoleForm
     , createRole, updateRole, deleteRole
+    , CollaboratorForm, emptyCollaboratorForm, collaboratorFormFromCollaborator, encodeCollaboratorForm
+    , createCollaborator, updateCollaborator, deleteCollaborator
     )
 
 {-| HTTP boundary to the ColabLife backend.
@@ -26,6 +28,8 @@ here is a root-relative path — no base URL or CORS to deal with.
 @docs createSector, updateSector, deleteSector
 @docs RoleForm, emptyRoleForm, roleFormFromRole, encodeRoleForm
 @docs createRole, updateRole, deleteRole
+@docs CollaboratorForm, emptyCollaboratorForm, collaboratorFormFromCollaborator, encodeCollaboratorForm
+@docs createCollaborator, updateCollaborator, deleteCollaborator
 
 -}
 
@@ -120,12 +124,17 @@ type alias Role =
     }
 
 
-{-| A person managed inside the tenant. `email` is optional in the backend, so it
-is decoded as a `Maybe`.
+{-| A person managed inside the tenant. The references and contact fields are
+optional in the backend, so they are decoded as `Maybe` (an edit form pre-fills
+from them).
 -}
 type alias Collaborator =
     { id : String
     , name : String
+    , sectorId : Maybe String
+    , roleId : Maybe String
+    , managerId : Maybe String
+    , whatsapp : Maybe String
     , email : Maybe String
     , isManager : Bool
     }
@@ -176,15 +185,20 @@ optionalString name =
     Decode.maybe (Decode.field name Decode.string)
 
 
-{-| Decodes a single collaborator.
+{-| Decodes a single collaborator, including its optional references and contact
+fields.
 -}
 collaboratorDecoder : Decoder Collaborator
 collaboratorDecoder =
-    Decode.map4 Collaborator
-        (Decode.field "id" Decode.string)
-        (Decode.field "name" Decode.string)
-        (Decode.field "email" (Decode.nullable Decode.string))
-        (Decode.field "is_manager" Decode.bool)
+    Decode.succeed Collaborator
+        |> andMap (Decode.field "id" Decode.string)
+        |> andMap (Decode.field "name" Decode.string)
+        |> andMap (optionalString "sector_id")
+        |> andMap (optionalString "role_id")
+        |> andMap (optionalString "manager_id")
+        |> andMap (optionalString "whatsapp")
+        |> andMap (optionalString "email")
+        |> andMap (Decode.field "is_manager" Decode.bool)
 
 
 {-| `GET /sectors` with the session token.
@@ -393,3 +407,95 @@ updateRole token id form toMsg =
 deleteRole : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
 deleteRole token id toMsg =
     authRequest token "DELETE" ("/roles/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)
+
+
+{-| The create/update payload for a collaborator. The references
+(`sectorId`/`roleId`/`managerId`) and contact fields are plain `String`s where an
+empty string means "none / leave untouched"; `isManager` is always sent.
+-}
+type alias CollaboratorForm =
+    { name : String
+    , sectorId : String
+    , roleId : String
+    , managerId : String
+    , whatsapp : String
+    , email : String
+    , isManager : Bool
+    }
+
+
+{-| A blank collaborator form (the starting point for creating one).
+-}
+emptyCollaboratorForm : CollaboratorForm
+emptyCollaboratorForm =
+    { name = ""
+    , sectorId = ""
+    , roleId = ""
+    , managerId = ""
+    , whatsapp = ""
+    , email = ""
+    , isManager = False
+    }
+
+
+{-| Pre-fills a collaborator form from an existing collaborator (for editing).
+Missing references/contacts become empty strings.
+-}
+collaboratorFormFromCollaborator : Collaborator -> CollaboratorForm
+collaboratorFormFromCollaborator collaborator =
+    { name = collaborator.name
+    , sectorId = Maybe.withDefault "" collaborator.sectorId
+    , roleId = Maybe.withDefault "" collaborator.roleId
+    , managerId = Maybe.withDefault "" collaborator.managerId
+    , whatsapp = Maybe.withDefault "" collaborator.whatsapp
+    , email = Maybe.withDefault "" collaborator.email
+    , isManager = collaborator.isManager
+    }
+
+
+{-| Encodes a collaborator form: `name` and `is_manager` are always present; each
+reference/contact is included only when non-blank, so unset selects are omitted.
+-}
+encodeCollaboratorForm : CollaboratorForm -> Encode.Value
+encodeCollaboratorForm form =
+    Encode.object
+        (( "name", Encode.string form.name )
+            :: ( "is_manager", Encode.bool form.isManager )
+            :: List.filterMap optionalPair
+                [ ( "sector_id", form.sectorId )
+                , ( "role_id", form.roleId )
+                , ( "manager_id", form.managerId )
+                , ( "whatsapp", form.whatsapp )
+                , ( "email", form.email )
+                ]
+        )
+
+
+{-| `POST /collaborators` — creates a collaborator.
+-}
+createCollaborator : String -> CollaboratorForm -> (Result Http.Error Collaborator -> msg) -> Cmd msg
+createCollaborator token form toMsg =
+    authRequest token
+        "POST"
+        "/collaborators"
+        (Http.jsonBody (encodeCollaboratorForm form))
+        (Http.expectJson toMsg collaboratorDecoder)
+
+
+{-| `PATCH /collaborators/{id}` — updates a collaborator.
+-}
+updateCollaborator : String -> String -> CollaboratorForm -> (Result Http.Error Collaborator -> msg) -> Cmd msg
+updateCollaborator token id form toMsg =
+    authRequest token
+        "PATCH"
+        ("/collaborators/" ++ id)
+        (Http.jsonBody (encodeCollaboratorForm form))
+        (Http.expectJson toMsg collaboratorDecoder)
+
+
+{-| `DELETE /collaborators/{id}` — deactivates a collaborator (soft delete; backend
+replies `204`).
+-}
+deleteCollaborator : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
+deleteCollaborator token id toMsg =
+    authRequest token "DELETE" ("/collaborators/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)

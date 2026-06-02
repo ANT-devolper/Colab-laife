@@ -260,3 +260,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   collaborators-only. Unit-tested with `elm-test` (the role encoder and the extended decoder)
   and end-to-end with Playwright (`e2e/tests/roles-write.spec.ts`: sign in → create → edit →
   deactivate). The backend is unchanged (the `/roles` write routes already existed).
+- Collaborator write UI in the Elm SPA, closing the cadastro write CRUD: `Page/Collaborators.elm`
+  fetches collaborators, sectors and roles, and offers a single form (create + edit + deactivate)
+  whose sector/role/manager fields are dropdowns populated from the active lists, plus
+  WhatsApp/email and an "is manager" checkbox; a failed save (e.g. the backend's `422` for a
+  dangling reference) surfaces as a form error. `Api.elm` gains
+  `createCollaborator`/`updateCollaborator`/`deleteCollaborator`, the pure
+  `encodeCollaboratorForm` (always sends name + `is_manager`, omits unset references/contacts)
+  and `collaboratorFormFromCollaborator`, and its `Collaborator`/`collaboratorDecoder` now carry
+  the references and WhatsApp so an edit can pre-fill. `Page.Directory` is removed — its
+  collaborators list is superseded by the write page — and `Main.elm` composes the three cadastro
+  pages (`Sectors`/`Roles`/`Collaborators`). Unit-tested with `elm-test` (the collaborator encoder
+  and the extended decoder) and end-to-end with Playwright (`e2e/tests/collaborators-write.spec.ts`:
+  seed a sector + role via the API, sign in → create picking them → edit → deactivate). The backend
+  is unchanged (the `/collaborators` write routes already existed).

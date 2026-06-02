@@ -1,14 +1,14 @@
 module Main exposing (main)
 
 {-| ColabLife SPA entry point. Two states: the sign-in page, and the authenticated
-shell. The shell composes `Page.Sectors` and `Page.Roles` (full write CRUD) with
-the still read-only `Page.Directory` (collaborators).
+shell. The shell composes the cadastro write pages: `Page.Sectors`, `Page.Roles`
+and `Page.Collaborators`.
 -}
 
 import Browser
 import Html exposing (Html, div, h1, text)
 import Html.Attributes exposing (class)
-import Page.Directory as Directory
+import Page.Collaborators as Collaborators
 import Page.Login as Login
 import Page.Roles as Roles
 import Page.Sectors as Sectors
@@ -28,7 +28,7 @@ type Page
 type alias Authed =
     { sectors : Sectors.Model
     , roles : Roles.Model
-    , directory : Directory.Model
+    , collaborators : Collaborators.Model
     }
 
 
@@ -36,7 +36,7 @@ type Msg
     = LoginMsg Login.Msg
     | SectorsMsg Sectors.Msg
     | RolesMsg Roles.Msg
-    | DirectoryMsg Directory.Msg
+    | CollaboratorsMsg Collaborators.Msg
 
 
 init : () -> ( Model, Cmd Msg )
@@ -61,21 +61,21 @@ update msg model =
                         ( roles, rolesCmd ) =
                             Roles.init token
 
-                        ( directory, directoryCmd ) =
-                            Directory.init token
+                        ( collaborators, collaboratorsCmd ) =
+                            Collaborators.init token
                     in
                     ( { model
                         | page =
                             AuthedView
                                 { sectors = sectors
                                 , roles = roles
-                                , directory = directory
+                                , collaborators = collaborators
                                 }
                       }
                     , Cmd.batch
                         [ Cmd.map SectorsMsg sectorsCmd
                         , Cmd.map RolesMsg rolesCmd
-                        , Cmd.map DirectoryMsg directoryCmd
+                        , Cmd.map CollaboratorsMsg collaboratorsCmd
                         ]
                     )
 
@@ -102,13 +102,13 @@ update msg model =
             , Cmd.map RolesMsg cmd
             )
 
-        ( DirectoryMsg subMsg, AuthedView authed ) ->
+        ( CollaboratorsMsg subMsg, AuthedView authed ) ->
             let
-                ( directory, cmd ) =
-                    Directory.update subMsg authed.directory
+                ( collaborators, cmd ) =
+                    Collaborators.update subMsg authed.collaborators
             in
-            ( { model | page = AuthedView { authed | directory = directory } }
-            , Cmd.map DirectoryMsg cmd
+            ( { model | page = AuthedView { authed | collaborators = collaborators } }
+            , Cmd.map CollaboratorsMsg cmd
             )
 
         -- Messages that do not match the current page are ignored.
@@ -134,7 +134,7 @@ viewPage page =
                 [ h1 [] [ text "Directory" ]
                 , Html.map SectorsMsg (Sectors.view authed.sectors)
                 , Html.map RolesMsg (Roles.view authed.roles)
-                , Html.map DirectoryMsg (Directory.view authed.directory)
+                , Html.map CollaboratorsMsg (Collaborators.view authed.collaborators)
                 ]
 
 

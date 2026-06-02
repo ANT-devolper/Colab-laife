@@ -56,19 +56,23 @@ suite =
                             , active = True
                             }
                         )
-        , test "collaboratorDecoder reads a present email" <|
+        , test "collaboratorDecoder reads a present email and references" <|
             \_ ->
-                "{\"id\":\"c1\",\"name\":\"Alice\",\"email\":\"alice@acme.test\",\"is_manager\":true}"
+                "{\"id\":\"c1\",\"name\":\"Alice\",\"sector_id\":\"s1\",\"role_id\":\"r1\",\"manager_id\":null,\"whatsapp\":\"+55\",\"email\":\"alice@acme.test\",\"is_manager\":true}"
                     |> Decode.decodeString Api.collaboratorDecoder
                     |> Expect.equal
                         (Ok
                             { id = "c1"
                             , name = "Alice"
+                            , sectorId = Just "s1"
+                            , roleId = Just "r1"
+                            , managerId = Nothing
+                            , whatsapp = Just "+55"
                             , email = Just "alice@acme.test"
                             , isManager = True
                             }
                         )
-        , test "collaboratorDecoder reads a null email as Nothing" <|
+        , test "collaboratorDecoder reads null/absent optional fields as Nothing" <|
             \_ ->
                 "{\"id\":\"c2\",\"name\":\"Bob\",\"email\":null,\"is_manager\":false}"
                     |> Decode.decodeString Api.collaboratorDecoder
@@ -76,6 +80,10 @@ suite =
                         (Ok
                             { id = "c2"
                             , name = "Bob"
+                            , sectorId = Nothing
+                            , roleId = Nothing
+                            , managerId = Nothing
+                            , whatsapp = Nothing
                             , email = Nothing
                             , isManager = False
                             }
@@ -124,4 +132,30 @@ suite =
                     }
                     |> Encode.encode 0
                     |> Expect.equal "{\"name\":\"Engineer\"}"
+        , test "encodeCollaboratorForm always carries name and is_manager, plus chosen references" <|
+            \_ ->
+                Api.encodeCollaboratorForm
+                    { name = "Alice"
+                    , sectorId = "s1"
+                    , roleId = ""
+                    , managerId = ""
+                    , whatsapp = ""
+                    , email = "alice@acme.test"
+                    , isManager = True
+                    }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"name\":\"Alice\",\"is_manager\":true,\"sector_id\":\"s1\",\"email\":\"alice@acme.test\"}"
+        , test "encodeCollaboratorForm omits every unset optional field" <|
+            \_ ->
+                Api.encodeCollaboratorForm
+                    { name = "Bob"
+                    , sectorId = ""
+                    , roleId = ""
+                    , managerId = ""
+                    , whatsapp = ""
+                    , email = ""
+                    , isManager = False
+                    }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"name\":\"Bob\",\"is_manager\":false}"
         ]

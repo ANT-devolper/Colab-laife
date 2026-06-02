@@ -27,7 +27,9 @@ most other modules attach to (notes, feedback, DISC, tasks).
   references its sector, role and manager (self-FK). Carries `whatsapp`, `email`, `is_manager`,
   `date_of_hire` and `active`. RBAC-guarded CRUD at `/collaborators`
   (`collaborator.{read,create,update,delete}`); create/update reject dangling references with
-  `422`; removal is a soft delete.
+  `422`; removal is a soft delete. The Elm SPA offers full write for collaborators (create / edit
+  with sector/role/manager dropdowns + WhatsApp/email/is-manager / deactivate) via
+  `Page/Collaborators.elm`; a backend `422` for a dangling reference surfaces as a form error.
 
 ## Main flows
 
@@ -43,10 +45,9 @@ most other modules attach to (notes, feedback, DISC, tasks).
 ## Status
 
 Core implemented. The module's tables live in the tenant schema (`TenantMigrator`): `sector`,
-`role` and `collaborator` exist with their RBAC-guarded CRUD. The Elm SPA has write CRUD for
-`sector` and `role` (`collaborator` write is the next slice). Still deferred: the
-org-hierarchy/"accessible collaborators" service (only the `manager_id` column exists for now),
-collaborator write CRUD from the Elm UI, and multi-company (`company_info`/`company_id`).
+`role` and `collaborator` exist with their RBAC-guarded CRUD, and the Elm SPA has write CRUD for
+all three. Still deferred: the org-hierarchy/"accessible collaborators" service (only the
+`manager_id` column exists for now) and multi-company (`company_info`/`company_id`).
 
 ## Reference
 
