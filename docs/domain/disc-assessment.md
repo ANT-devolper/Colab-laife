@@ -1,8 +1,9 @@
 # DISC assessment
 
 > **Status:** 🚧 in progress — the collaborator result backend is ✅ implemented (table + entity +
-> RBAC-guarded CRUD + profile derivation). The public questionnaire submission, the Elm
-> questionnaire/results UI and the recruitment-candidate variant are next.
+> RBAC-guarded CRUD + profile derivation), including the ✅ public (no-auth) submission endpoint
+> ([ADR 0012](../adr/0012-public-disc-submission.md)). The Elm questionnaire/results UI and the
+> recruitment-candidate variant are next.
 
 ## Purpose
 
@@ -38,10 +39,10 @@ four DISC dimensions: **D**ominance, **I**nfluence, **S**teadiness, **C**onscien
 ## Status
 
 Backend for collaborator results implemented (`collaborator_disc_result` in `TenantMigrator`,
-`entity::collaborator_disc_result`, `service::disc`, `api::disc_results`). The scoring (ranking
+`entity::collaborator_disc_result`, `service::disc`, `api::disc_results`), including the public
+`POST /public/disc-results` (no auth, tenant resolved by `schema`; ADR 0012). The scoring (ranking
 1–4 per row → points `4 - position` summed per dimension) lives in the Elm questionnaire and is
-🚧 next, along with the public (no-auth, UUID-in-URL) submission endpoint and the
-recruitment-candidate result variant.
+🚧 next, along with the results UI and the recruitment-candidate result variant.
 
 ## Reference
 

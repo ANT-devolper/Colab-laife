@@ -171,6 +171,86 @@ async fn recording_for_an_unknown_collaborator_is_rejected() {
 }
 
 #[tokio::test]
+async fn anyone_can_submit_a_result_through_the_public_endpoint() {
+    let (server, _db, _provisioned) = setup().await;
+    let token = token(&server, "admin@acme.test", ADMIN_PASSWORD).await;
+    let auth = format!("Bearer {token}");
+
+    let collaborator_id = create_collaborator(&server, &auth, "Carol Candidate").await;
+
+    // No Authorization header — the tenant is resolved from the `schema` field.
+    let submitted = server
+        .post("/public/disc-results")
+        .json(&json!({
+            "schema": "acme",
+            "collaborator_id": collaborator_id,
+            "executor": 30,
+            "communicator": 1,
+            "planner": 2,
+            "analyst": 3
+        }))
+        .await;
+    submitted.assert_status(StatusCode::CREATED);
+    let body = submitted.json::<serde_json::Value>();
+    assert_eq!(body["collaborator_id"], collaborator_id);
+    assert_eq!(body["primary_profile"], "executor");
+
+    // The admin can read it back.
+    let listed = server
+        .get(&format!("/disc-results?collaborator_id={collaborator_id}"))
+        .add_header("Authorization", &auth)
+        .await;
+    listed.assert_status(StatusCode::OK);
+    assert_eq!(
+        listed
+            .json::<serde_json::Value>()
+            .as_array()
+            .expect("array")
+            .len(),
+        1,
+        "the publicly-submitted result should be stored"
+    );
+}
+
+#[tokio::test]
+async fn public_submission_rejects_an_unknown_collaborator() {
+    let (server, _db, _provisioned) = setup().await;
+
+    let response = server
+        .post("/public/disc-results")
+        .json(&json!({
+            "schema": "acme",
+            "collaborator_id": Uuid::new_v4().to_string(),
+            "executor": 1,
+            "communicator": 2,
+            "planner": 3,
+            "analyst": 4
+        }))
+        .await;
+
+    response.assert_status(StatusCode::UNPROCESSABLE_ENTITY);
+}
+
+#[tokio::test]
+async fn public_submission_rejects_an_invalid_schema() {
+    let (server, _db, _provisioned) = setup().await;
+
+    let response = server
+        .post("/public/disc-results")
+        .json(&json!({
+            "schema": "Invalid Schema",
+            "collaborator_id": Uuid::new_v4().to_string(),
+            "executor": 1,
+            "communicator": 2,
+            "planner": 3,
+            "analyst": 4
+        }))
+        .await;
+
+    response.assert_status(StatusCode::UNPROCESSABLE_ENTITY);
+}
+
+#[tokio::test]
 async fn a_user_without_the_permission_is_forbidden() {
     let (server, db, provisioned) = setup().await;
 

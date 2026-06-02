@@ -5,7 +5,7 @@
 //! collaborator exists and is active (a dangling reference → `422`). Results are
 //! immutable: there is no update, and `delete` is a hard delete.
 
-use axum::extract::{Path, Query};
+use axum::extract::{Path, Query, State};
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
@@ -15,8 +15,10 @@ use sea_orm::{ActiveModelTrait, ColumnTrait, EntityTrait, QueryFilter, QueryOrde
 use serde::{Deserialize, Serialize};
 use service::disc::{profile, DiscScores};
 use service::permission::Resource;
+use service::tenant::TenantError;
 
 use crate::extract::{AuthRejection, TenantContext};
+use crate::AppState;
 
 #[derive(Serialize)]
 struct DiscResultView {
@@ -136,6 +138,56 @@ pub async fn delete(ctx: TenantContext, Path(id): Path<Uuid>) -> Result<Response
     Ok(StatusCode::NO_CONTENT.into_response())
 }
 
+#[derive(Deserialize)]
+pub struct PublicDiscResult {
+    schema: String,
+    collaborator_id: Uuid,
+    executor: i32,
+    communicator: i32,
+    planner: i32,
+    analyst: i32,
+}
+
+/// `POST /public/disc-results` — records a DISC result **without authentication**,
+/// for a respondent following a tokenless link that carries the tenant `schema`
+/// and the `collaborator_id` (security rests on the UUID's unguessability — see
+/// ADR 0012). The tenant is resolved from the `schema` field; an invalid schema or
+/// an unknown collaborator → `422`. No RBAC (the respondent is anonymous).
+pub async fn create_public(
+    State(state): State<AppState>,
+    Json(body): Json<PublicDiscResult>,
+) -> Response {
+    let conn = match state.tenants.connection(&body.schema).await {
+        Ok(conn) => conn,
+        Err(TenantError::InvalidSchema) => return unprocessable("invalid schema"),
+        Err(TenantError::Db(_)) => return internal_error(),
+    };
+    let conn = conn.as_ref();
+
+    match collaborator_exists(conn, body.collaborator_id).await {
+        Ok(true) => {}
+        Ok(false) => return unprocessable("unknown collaborator"),
+        Err(_) => return internal_error(),
+    }
+
+    let created = disc_result::ActiveModel {
+        id: Set(Uuid::new_v4()),
+        collaborator_id: Set(body.collaborator_id),
+        executor: Set(body.executor),
+        communicator: Set(body.communicator),
+        planner: Set(body.planner),
+        analyst: Set(body.analyst),
+        ..Default::default()
+    }
+    .insert(conn)
+    .await;
+
+    match created {
+        Ok(model) => (StatusCode::CREATED, Json(DiscResultView::from(model))).into_response(),
+        Err(_) => internal_error(),
+    }
+}
+
 /// Whether an active collaborator with `id` exists in the tenant.
 async fn collaborator_exists(
     conn: &impl sea_orm::ConnectionTrait,
@@ -161,6 +213,14 @@ fn unprocessable(message: &str) -> Response {
     (
         StatusCode::UNPROCESSABLE_ENTITY,
         Json(serde_json::json!({ "error": message })),
+    )
+        .into_response()
+}
+
+fn internal_error() -> Response {
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(serde_json::json!({ "error": "internal error" })),
     )
         .into_response()
 }

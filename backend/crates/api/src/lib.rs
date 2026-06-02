@@ -103,6 +103,7 @@ pub fn build_router(
             get(disc_results::list).post(disc_results::create),
         )
         .route("/disc-results/{id}", delete(disc_results::delete))
+        .route("/public/disc-results", post(disc_results::create_public))
         .with_state(state)
 }
 

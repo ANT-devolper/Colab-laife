@@ -324,3 +324,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   table check, `service::disc` unit tests, and HTTP integration tests (record → list with derived
   profile → delete; unknown collaborator → `422`; permissionless member → `403`). The Elm
   questionnaire/results UI and the public (no-auth) submission endpoint are next.
+- Public DISC submission endpoint (Phase 3B): an unauthenticated `POST /public/disc-results`
+  whose body carries the tenant `schema` plus the `collaborator_id` and the four scores, for a
+  respondent following a tokenless link. The tenant is resolved via `TenantRegistry` (which
+  validates the schema name → `422` on an invalid one); an unknown collaborator → `422`; no RBAC
+  runs (security rests on the UUID's unguessability). Recorded in **ADR 0012**. Tested over HTTP
+  (submit without auth → `201` and readable back by the admin; unknown collaborator → `422`;
+  invalid schema → `422`).
