@@ -1,14 +1,16 @@
 module Main exposing (main)
 
-{-| ColabLife SPA entry point. For this slice the app has two states: the sign-in
-page, and a placeholder authenticated shell once a session token is obtained.
-Read-only lists land in the next increment.
+{-| ColabLife SPA entry point. Two states: the sign-in page, and the authenticated
+shell. The shell composes `Page.Sectors` (full write CRUD) with the still
+read-only `Page.Directory` (collaborators and roles).
 -}
 
 import Browser
-import Html exposing (Html)
+import Html exposing (Html, div, h1, text)
+import Html.Attributes exposing (class)
 import Page.Directory as Directory
 import Page.Login as Login
+import Page.Sectors as Sectors
 
 
 type alias Model =
@@ -17,11 +19,20 @@ type alias Model =
 
 type Page
     = LoginView Login.Model
-    | DirectoryView Directory.Model
+    | AuthedView Authed
+
+
+{-| The authenticated shell's sub-pages.
+-}
+type alias Authed =
+    { sectors : Sectors.Model
+    , directory : Directory.Model
+    }
 
 
 type Msg
     = LoginMsg Login.Msg
+    | SectorsMsg Sectors.Msg
     | DirectoryMsg Directory.Msg
 
 
@@ -41,11 +52,17 @@ update msg model =
             case outMsg of
                 Login.LoggedIn token ->
                     let
-                        ( directoryModel, directoryCmd ) =
+                        ( sectors, sectorsCmd ) =
+                            Sectors.init token
+
+                        ( directory, directoryCmd ) =
                             Directory.init token
                     in
-                    ( { model | page = DirectoryView directoryModel }
-                    , Cmd.map DirectoryMsg directoryCmd
+                    ( { model | page = AuthedView { sectors = sectors, directory = directory } }
+                    , Cmd.batch
+                        [ Cmd.map SectorsMsg sectorsCmd
+                        , Cmd.map DirectoryMsg directoryCmd
+                        ]
                     )
 
                 Login.NoOp ->
@@ -53,20 +70,26 @@ update msg model =
                     , Cmd.map LoginMsg loginCmd
                     )
 
-        ( DirectoryMsg subMsg, DirectoryView directoryModel ) ->
+        ( SectorsMsg subMsg, AuthedView authed ) ->
             let
-                ( newDirectoryModel, directoryCmd ) =
-                    Directory.update subMsg directoryModel
+                ( sectors, cmd ) =
+                    Sectors.update subMsg authed.sectors
             in
-            ( { model | page = DirectoryView newDirectoryModel }
-            , Cmd.map DirectoryMsg directoryCmd
+            ( { model | page = AuthedView { authed | sectors = sectors } }
+            , Cmd.map SectorsMsg cmd
+            )
+
+        ( DirectoryMsg subMsg, AuthedView authed ) ->
+            let
+                ( directory, cmd ) =
+                    Directory.update subMsg authed.directory
+            in
+            ( { model | page = AuthedView { authed | directory = directory } }
+            , Cmd.map DirectoryMsg cmd
             )
 
         -- Messages that do not match the current page are ignored.
-        ( LoginMsg _, DirectoryView _ ) ->
-            ( model, Cmd.none )
-
-        ( DirectoryMsg _, LoginView _ ) ->
+        _ ->
             ( model, Cmd.none )
 
 
@@ -83,8 +106,12 @@ viewPage page =
         LoginView loginModel ->
             Html.map LoginMsg (Login.view loginModel)
 
-        DirectoryView directoryModel ->
-            Html.map DirectoryMsg (Directory.view directoryModel)
+        AuthedView authed ->
+            div [ class "directory" ]
+                [ h1 [] [ text "Directory" ]
+                , Html.map SectorsMsg (Sectors.view authed.sectors)
+                , Html.map DirectoryMsg (Directory.view authed.directory)
+                ]
 
 
 main : Program () Model Msg

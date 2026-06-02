@@ -1,16 +1,16 @@
 module Page.Directory exposing (Model, Msg, init, update, view)
 
-{-| The authenticated landing page: read-only tables of the tenant's
-collaborators, sectors and roles. Each list is fetched on entry with the session
-token; the view shows a loading, empty, error or populated state per list. No
-write actions yet — those land in a later slice.
+{-| Read-only tables of the tenant's collaborators and roles. (Sectors moved to
+`Page.Sectors`, which adds write actions; collaborators and roles stay read-only
+until their own write slices.) Each list is fetched on entry with the session
+token; the view shows a loading, empty, error or populated state per list.
 
 @docs Model, Msg, init, update, view
 
 -}
 
 import Api
-import Html exposing (Html, div, em, h1, h2, p, section, table, tbody, td, text, th, thead, tr)
+import Html exposing (Html, div, em, h2, p, section, table, tbody, td, text, th, thead, tr)
 import Html.Attributes exposing (class)
 import Http
 
@@ -28,7 +28,6 @@ type Load a
 type alias Model =
     { token : String
     , collaborators : Load (List Api.Collaborator)
-    , sectors : Load (List Api.Sector)
     , roles : Load (List Api.Role)
     }
 
@@ -37,22 +36,19 @@ type alias Model =
 -}
 type Msg
     = GotCollaborators (Result Http.Error (List Api.Collaborator))
-    | GotSectors (Result Http.Error (List Api.Sector))
     | GotRoles (Result Http.Error (List Api.Role))
 
 
-{-| Starts every list as `Loading` and fires the three authenticated fetches.
+{-| Starts every list as `Loading` and fires the authenticated fetches.
 -}
 init : String -> ( Model, Cmd Msg )
 init token =
     ( { token = token
       , collaborators = Loading
-      , sectors = Loading
       , roles = Loading
       }
     , Cmd.batch
         [ Api.getCollaborators token GotCollaborators
-        , Api.getSectors token GotSectors
         , Api.getRoles token GotRoles
         ]
     )
@@ -65,9 +61,6 @@ update msg model =
     case msg of
         GotCollaborators result ->
             ( { model | collaborators = fromResult result }, Cmd.none )
-
-        GotSectors result ->
-            ( { model | sectors = fromResult result }, Cmd.none )
 
         GotRoles result ->
             ( { model | roles = fromResult result }, Cmd.none )
@@ -83,27 +76,21 @@ fromResult result =
             Failed
 
 
-{-| The authenticated shell with the three read-only sections.
+{-| The two read-only sections.
 -}
 view : Model -> Html Msg
 view model =
     div [ class "directory" ]
-        [ h1 [] [ text "Directory" ]
-        , viewList "Collaborators"
+        [ viewList "Collaborators"
             "No collaborators yet."
             [ "Name", "Email" ]
             collaboratorRow
             model.collaborators
-        , viewList "Sectors"
-            "No sectors yet."
-            [ "Name" ]
-            namedRow
-            (mapLoad (List.map sectorNamed) model.sectors)
         , viewList "Roles"
             "No roles yet."
             [ "Name" ]
             namedRow
-            (mapLoad (List.map roleNamed) model.roles)
+            (mapLoad (List.map .name) model.roles)
         ]
 
 
@@ -142,16 +129,6 @@ collaboratorRow collaborator =
 namedRow : String -> Html msg
 namedRow name =
     tr [] [ td [] [ text name ] ]
-
-
-sectorNamed : Api.Sector -> String
-sectorNamed sector =
-    sector.name
-
-
-roleNamed : Api.Role -> String
-roleNamed role =
-    role.name
 
 
 mapLoad : (a -> b) -> Load a -> Load b

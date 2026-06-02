@@ -5,6 +5,8 @@ module Api exposing
     , Sector, Role, Collaborator
     , sectorDecoder, roleDecoder, collaboratorDecoder
     , getSectors, getRoles, getCollaborators
+    , SectorForm, encodeSectorForm
+    , createSector, updateSector, deleteSector
     )
 
 {-| HTTP boundary to the ColabLife backend.
@@ -18,6 +20,8 @@ here is a root-relative path — no base URL or CORS to deal with.
 @docs Sector, Role, Collaborator
 @docs sectorDecoder, roleDecoder, collaboratorDecoder
 @docs getSectors, getRoles, getCollaborators
+@docs SectorForm, encodeSectorForm
+@docs createSector, updateSector, deleteSector
 
 -}
 
@@ -169,12 +173,67 @@ getCollaborators token toMsg =
 -}
 authGet : String -> String -> Decoder a -> (Result Http.Error a -> msg) -> Cmd msg
 authGet token url decoder toMsg =
+    authRequest token "GET" url Http.emptyBody (Http.expectJson toMsg decoder)
+
+
+{-| An authenticated request (any method) carrying the `Authorization: Bearer`
+header. The caller chooses the body and how to interpret the response.
+-}
+authRequest : String -> String -> String -> Http.Body -> Http.Expect msg -> Cmd msg
+authRequest token method url body expect =
     Http.request
-        { method = "GET"
+        { method = method
         , headers = [ authHeader token ]
         , url = url
-        , body = Http.emptyBody
-        , expect = Http.expectJson toMsg decoder
+        , body = body
+        , expect = expect
         , timeout = Nothing
         , tracker = Nothing
         }
+
+
+
+-- CADASTRO (write)
+
+
+{-| The create/update payload for a sector.
+-}
+type alias SectorForm =
+    { name : String }
+
+
+{-| Encodes a sector form into the JSON body the endpoint expects.
+-}
+encodeSectorForm : SectorForm -> Encode.Value
+encodeSectorForm form =
+    Encode.object [ ( "name", Encode.string form.name ) ]
+
+
+{-| `POST /sectors` — creates a sector.
+-}
+createSector : String -> SectorForm -> (Result Http.Error Sector -> msg) -> Cmd msg
+createSector token form toMsg =
+    authRequest token
+        "POST"
+        "/sectors"
+        (Http.jsonBody (encodeSectorForm form))
+        (Http.expectJson toMsg sectorDecoder)
+
+
+{-| `PATCH /sectors/{id}` — updates a sector.
+-}
+updateSector : String -> String -> SectorForm -> (Result Http.Error Sector -> msg) -> Cmd msg
+updateSector token id form toMsg =
+    authRequest token
+        "PATCH"
+        ("/sectors/" ++ id)
+        (Http.jsonBody (encodeSectorForm form))
+        (Http.expectJson toMsg sectorDecoder)
+
+
+{-| `DELETE /sectors/{id}` — deactivates a sector (soft delete; backend replies
+`204`, so there is no body to decode).
+-}
+deleteSector : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
+deleteSector token id toMsg =
+    authRequest token "DELETE" ("/sectors/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)

@@ -242,3 +242,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Integration-tested (admin create → list filtered by collaborator → partial update → soft
   delete; unknown collaborator → `422`; permissionless member → `403`) plus a migration test.
   This completes the Phase 3A backend (feedback + expectation contract + behaviors + annotations).
+- Sector write UI in the Elm SPA: the authenticated shell now manages sectors end to end —
+  `Page/Sectors.elm` lists them and offers a create form, inline rename and deactivate,
+  re-fetching the list after each successful mutation. `Api.elm` gains `createSector`/
+  `updateSector`/`deleteSector` (over a shared authenticated-request helper) and the pure
+  `encodeSectorForm`; `Main.elm` composes `Page.Sectors` with the still read-only
+  `Page.Directory` (collaborators and roles). Unit-tested with `elm-test` (the sector encoder)
+  and end-to-end with Playwright (`e2e/tests/sectors-write.spec.ts`: sign in → create → inline
+  rename → deactivate). The backend is unchanged (the `/sectors` write routes already existed).

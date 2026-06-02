@@ -227,11 +227,15 @@ The frontend is an Elm SPA (`frontend/`, The Elm Architecture) that talks to the
 over HTTP/JSON. Current scope:
 
 - A sign-in page that exchanges credentials for a session token (`Api.elm` — the HTTP
-  boundary; `Page/Login.elm` — the form; `Main.elm` — the `Login` / `Directory` shell). ✅
-- A read-only **Directory** (`Page/Directory.elm`): once authenticated, it fetches
-  `/collaborators`, `/sectors` and `/roles` with the Bearer token and renders a table per list,
-  each with a loading / empty / error state. ✅
-- Write actions from the UI (create/edit) are 🚧 planned for a later slice.
+  boundary; `Page/Login.elm` — the form; `Main.elm` — the `Login` / authenticated shell). ✅
+- **Sector management** (`Page/Sectors.elm`): once authenticated, the shell lists sectors and
+  offers full write — a create form, inline rename and deactivate — re-fetching the list after
+  each successful mutation. The write calls (`createSector`/`updateSector`/`deleteSector`) live
+  in `Api.elm` over a shared authenticated-request helper. ✅
+- A read-only **Directory** (`Page/Directory.elm`): collaborators and roles, each rendered as a
+  table with a loading / empty / error state. ✅
+- Write actions from the UI for roles and collaborators are 🚧 planned next (same pattern as
+  sectors).
 
 **Single-origin delivery** ([ADR 0011](adr/0011-serve-spa-from-axum.md)): the Axum binary
 serves the built SPA itself, so the browser only ever talks to one origin (no CORS). ✅
@@ -264,13 +268,14 @@ Levels:
 - **Backend integration** — `axum-test` (real HTTP through the app) with `testcontainers`
   (a throwaway PostgreSQL in Docker). Static SPA serving is integration-tested with a
   `MockDatabase` (no Docker).
-- **Frontend unit** — `elm-test`. ✅ Covers the API boundary's pure parts (the login encoder
-  and the response/list decoders).
-- **E2E** — Playwright. ✅ A first spec drives the real stack: Playwright's `webServer`
+- **Frontend unit** — `elm-test`. ✅ Covers the API boundary's pure parts (the login and sector
+  encoders and the response/list decoders).
+- **E2E** — Playwright. ✅ Drives the real stack: Playwright's `webServer`
   (`e2e/scripts/e2e-stack.mjs`) boots PostgreSQL, migrates, builds the SPA and runs the API
-  serving it; the test provisions a tenant via the API, signs in through the SPA and asserts the
-  empty directory. The chromium project is the gate (`npm test`); Firefox/WebKit are available
-  via `npm run test:all` once their system libraries are installed.
+  serving it; the specs provision a tenant via the API, sign in through the SPA, and assert the
+  login/empty-directory path and the sector write flow (create → rename → deactivate). The
+  chromium project is the gate (`npm test`); Firefox/WebKit are available via `npm run test:all`
+  once their system libraries are installed.
 
 ## See also
 

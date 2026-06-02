@@ -69,4 +69,9 @@ suite =
                 "[]"
                     |> Decode.decodeString (Decode.list Api.sectorDecoder)
                     |> Expect.equal (Ok [])
+        , test "encodeSectorForm produces the sector JSON body" <|
+            \_ ->
+                Api.encodeSectorForm { name = "Engineering" }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"name\":\"Engineering\"}"
         ]

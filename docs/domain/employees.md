@@ -13,7 +13,8 @@ most other modules attach to (notes, feedback, DISC, tasks).
 
 - **Sector** — an organizational unit (department) inside a tenant. ✅ Implemented as the
   `sector` table in the tenant schema (`id`, `name`, `active`, timestamps), with RBAC-guarded
-  CRUD at `/sectors` (`sector.{read,create,update,delete}`); removal is a soft delete.
+  CRUD at `/sectors` (`sector.{read,create,update,delete}`); removal is a soft delete. The Elm
+  SPA offers full write for sectors (create / inline rename / deactivate) via `Page/Sectors.elm`.
 - **Role** (`role`) — a job title with the legacy description fields. ✅ Implemented as the
   `role` table in the tenant schema (`name` plus the optional `profile_suggestion`,
   `objective`, the `requirement_*` breakdown and `observation`, `active`, timestamps), with

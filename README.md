@@ -18,9 +18,9 @@ today:
 - People domains (in progress): the notes & feedback backend — `feedback` with its
   expectation-contract items and scored behaviors, plus standalone `annotation` notes — each
   with RBAC-guarded CRUD.
-- Elm SPA: a login page that obtains a session token and a read-only directory
-  (collaborators/sectors/roles), served from the Axum binary on the same origin. Covered by a
-  first Playwright end-to-end test.
+- Elm SPA: a login page that obtains a session token, full sector management (create / rename /
+  deactivate) and a read-only directory (collaborators/roles), served from the Axum binary on the
+  same origin. Covered by Playwright end-to-end tests.
 
 The eight business modules above are otherwise **planned** — see [`docs/domain/`](docs/domain/)
 for their intended scope.
