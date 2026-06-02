@@ -6,6 +6,7 @@ use std::path::Path;
 use std::sync::Arc;
 use tower_http::services::{ServeDir, ServeFile};
 
+mod annotations;
 mod auth;
 mod collaborators;
 mod expectation_items;
@@ -87,6 +88,14 @@ pub fn build_router(
         .route(
             "/feedback-behaviors/{id}",
             patch(feedback_behaviors::update).delete(feedback_behaviors::delete),
+        )
+        .route(
+            "/annotations",
+            get(annotations::list).post(annotations::create),
+        )
+        .route(
+            "/annotations/{id}",
+            patch(annotations::update).delete(annotations::delete),
         )
         .with_state(state)
 }

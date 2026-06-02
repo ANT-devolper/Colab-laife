@@ -30,6 +30,7 @@ impl MigratorTrait for TenantMigrator {
             Box::new(tenant::m20260601_000007_create_feedback::Migration),
             Box::new(tenant::m20260601_000008_create_expectation_contract_item::Migration),
             Box::new(tenant::m20260601_000009_create_feedback_behavior::Migration),
+            Box::new(tenant::m20260601_000010_create_annotation::Migration),
         ]
     }
 }

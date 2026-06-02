@@ -1,5 +1,6 @@
 //! SeaORM entities live here. One module per table, added as the data model grows.
 
+pub mod annotation;
 pub mod collaborator;
 pub mod expectation_contract_item;
 pub mod feedback;

@@ -47,6 +47,10 @@ pub enum Resource {
     FeedbackBehaviorCreate,
     FeedbackBehaviorUpdate,
     FeedbackBehaviorDelete,
+    AnnotationRead,
+    AnnotationCreate,
+    AnnotationUpdate,
+    AnnotationDelete,
 }
 
 impl Resource {
@@ -83,6 +87,10 @@ impl Resource {
             Self::FeedbackBehaviorCreate => "feedback_behavior.create",
             Self::FeedbackBehaviorUpdate => "feedback_behavior.update",
             Self::FeedbackBehaviorDelete => "feedback_behavior.delete",
+            Self::AnnotationRead => "annotation.read",
+            Self::AnnotationCreate => "annotation.create",
+            Self::AnnotationUpdate => "annotation.update",
+            Self::AnnotationDelete => "annotation.delete",
         }
     }
 
@@ -119,6 +127,10 @@ impl Resource {
             Self::FeedbackBehaviorCreate => "Create feedback behaviors",
             Self::FeedbackBehaviorUpdate => "Update feedback behaviors",
             Self::FeedbackBehaviorDelete => "Remove feedback behaviors",
+            Self::AnnotationRead => "View annotations",
+            Self::AnnotationCreate => "Create annotations",
+            Self::AnnotationUpdate => "Update annotations",
+            Self::AnnotationDelete => "Remove annotations",
         }
     }
 
@@ -155,6 +167,10 @@ impl Resource {
             Self::FeedbackBehaviorCreate,
             Self::FeedbackBehaviorUpdate,
             Self::FeedbackBehaviorDelete,
+            Self::AnnotationRead,
+            Self::AnnotationCreate,
+            Self::AnnotationUpdate,
+            Self::AnnotationDelete,
         ]
     }
 }

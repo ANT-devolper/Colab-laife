@@ -131,3 +131,13 @@ async fn tenant_migrations_create_the_feedback_behavior_table() {
         "expected tenant table `feedback_behavior` to exist"
     );
 }
+
+#[tokio::test]
+async fn tenant_migrations_create_the_annotation_table() {
+    let db = setup().await;
+
+    assert!(
+        table_exists(&db, SCHEMA, "annotation").await,
+        "expected tenant table `annotation` to exist"
+    );
+}

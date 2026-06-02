@@ -29,9 +29,9 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles`, `/collaborators`, `/feedbacks`, `/expectation-items` and `/feedback-behaviors` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators + feedback + expectation-contract + feedback-behavior CRUD |
-| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator`, `feedback`, `expectation_contract_item`, `feedback_behavior` |
-| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` + `feedback` + `expectation_contract_item` + `feedback_behavior` |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles`, `/collaborators`, `/feedbacks`, `/expectation-items`, `/feedback-behaviors` and `/annotations` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators + feedback + expectation-contract + feedback-behavior + annotations CRUD |
+| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator`, `feedback`, `expectation_contract_item`, `feedback_behavior`, `annotation` |
+| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` + `feedback` + `expectation_contract_item` + `feedback_behavior` + `annotation` |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
 
 The router is created by `build_router(db, database_url, jwt_secret)` in
@@ -209,7 +209,17 @@ removal is a **soft delete** (`active = false`); listings filter to active rows.
   `api::feedback_behaviors` as `GET`/`POST /feedback-behaviors` and `PATCH`/`DELETE
   /feedback-behaviors/{id}`, guarded by `feedback_behavior.{read,create,update,delete}`; `GET`
   accepts an optional `?feedback_id=` filter, and `create` rejects an unknown feedback with
-  `422`. Annotations are 🚧 planned next. ✅
+  `422`. ✅
+- **`annotation`** (`backend/crates/entity/src/annotation.rs`, migration
+  `m20260601_000010_create_annotation`) — a quick scored note about a collaborator:
+  `collaborator_id` (FK), `note_date`, a primary score (`score1_number`/`score1_type` + optional
+  description), an optional second score, an `ask_amount_days`/`amount_days` pair, a free
+  `main_note`, `period_start_date`, `observation`, `recorded_on_mobile`, `active`, timestamps.
+  **Redesign:** manager is derived from the collaborator at read time; `company_id` (multi-
+  company), attachments (S3) and feedback messaging (notifications) are dropped/deferred. Exposed
+  by `api::annotations` as `GET`/`POST /annotations` and `PATCH`/`DELETE /annotations/{id}`,
+  guarded by `annotation.{read,create,update,delete}`; `GET` accepts an optional
+  `?collaborator_id=` filter, and `create` rejects an unknown collaborator with `422`. ✅
 
 ## Frontend & delivery
 

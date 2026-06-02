@@ -226,3 +226,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   an unknown feedback with `422`; `PATCH` writes only the fields present in the body; removal is a
   soft delete. Integration-tested (admin create → list filtered by feedback → partial update →
   soft delete; unknown feedback → `422`; permissionless member → `403`) plus a migration test.
+- Annotations (Phase 3A): `TenantMigrator` now creates the `annotation` table — a quick scored
+  note about a collaborator (`collaborator_id` FK, `note_date`, a primary score
+  `score1_number`/`score1_type` plus optional description, an optional second score, an
+  `ask_amount_days`/`amount_days` pair, a free `main_note`, `period_start_date`, `observation`,
+  `recorded_on_mobile`, an `active` soft-delete flag and timestamps). Redesigned from the legacy
+  model: manager is derived from the collaborator at read time, and the deferred concerns are
+  dropped — `company_id` (multi-company), attachments (S3) and feedback messaging
+  (notifications). `entity::annotation` maps it with a relation to collaborator. The `Resource`
+  catalog gains `annotation.{read,create,update,delete}` (auto-granted to the seeded
+  administrator profile), and `api::annotations` exposes RBAC-guarded CRUD over the tenant
+  schema: `GET`/`POST /annotations`, `PATCH`/`DELETE /annotations/{id}`. `GET` lists newest-first
+  with an optional `?collaborator_id=` filter; `create` rejects an unknown collaborator with
+  `422`; `PATCH` writes only the fields present in the body; removal is a soft delete.
+  Integration-tested (admin create → list filtered by collaborator → partial update → soft
+  delete; unknown collaborator → `422`; permissionless member → `403`) plus a migration test.
+  This completes the Phase 3A backend (feedback + expectation contract + behaviors + annotations).

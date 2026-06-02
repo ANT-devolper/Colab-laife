@@ -15,8 +15,9 @@ today:
   login, a per-request tenant resolver + auth extractor, and granular per-tenant RBAC.
 - Cadastro backend in the tenant schema: `sector`, `role` and `collaborator`, each with
   RBAC-guarded CRUD.
-- People domains (in progress): `feedback` (the first, depends on `collaborator`) with
-  RBAC-guarded CRUD.
+- People domains (in progress): the notes & feedback backend — `feedback` with its
+  expectation-contract items and scored behaviors, plus standalone `annotation` notes — each
+  with RBAC-guarded CRUD.
 - Elm SPA: a login page that obtains a session token and a read-only directory
   (collaborators/sectors/roles), served from the Axum binary on the same origin. Covered by a
   first Playwright end-to-end test.
