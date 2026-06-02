@@ -1,8 +1,8 @@
 module Main exposing (main)
 
 {-| ColabLife SPA entry point. Two states: the sign-in page, and the authenticated
-shell. The shell composes `Page.Sectors` (full write CRUD) with the still
-read-only `Page.Directory` (collaborators and roles).
+shell. The shell composes `Page.Sectors` and `Page.Roles` (full write CRUD) with
+the still read-only `Page.Directory` (collaborators).
 -}
 
 import Browser
@@ -10,6 +10,7 @@ import Html exposing (Html, div, h1, text)
 import Html.Attributes exposing (class)
 import Page.Directory as Directory
 import Page.Login as Login
+import Page.Roles as Roles
 import Page.Sectors as Sectors
 
 
@@ -26,6 +27,7 @@ type Page
 -}
 type alias Authed =
     { sectors : Sectors.Model
+    , roles : Roles.Model
     , directory : Directory.Model
     }
 
@@ -33,6 +35,7 @@ type alias Authed =
 type Msg
     = LoginMsg Login.Msg
     | SectorsMsg Sectors.Msg
+    | RolesMsg Roles.Msg
     | DirectoryMsg Directory.Msg
 
 
@@ -55,12 +58,23 @@ update msg model =
                         ( sectors, sectorsCmd ) =
                             Sectors.init token
 
+                        ( roles, rolesCmd ) =
+                            Roles.init token
+
                         ( directory, directoryCmd ) =
                             Directory.init token
                     in
-                    ( { model | page = AuthedView { sectors = sectors, directory = directory } }
+                    ( { model
+                        | page =
+                            AuthedView
+                                { sectors = sectors
+                                , roles = roles
+                                , directory = directory
+                                }
+                      }
                     , Cmd.batch
                         [ Cmd.map SectorsMsg sectorsCmd
+                        , Cmd.map RolesMsg rolesCmd
                         , Cmd.map DirectoryMsg directoryCmd
                         ]
                     )
@@ -77,6 +91,15 @@ update msg model =
             in
             ( { model | page = AuthedView { authed | sectors = sectors } }
             , Cmd.map SectorsMsg cmd
+            )
+
+        ( RolesMsg subMsg, AuthedView authed ) ->
+            let
+                ( roles, cmd ) =
+                    Roles.update subMsg authed.roles
+            in
+            ( { model | page = AuthedView { authed | roles = roles } }
+            , Cmd.map RolesMsg cmd
             )
 
         ( DirectoryMsg subMsg, AuthedView authed ) ->
@@ -110,6 +133,7 @@ viewPage page =
             div [ class "directory" ]
                 [ h1 [] [ text "Directory" ]
                 , Html.map SectorsMsg (Sectors.view authed.sectors)
+                , Html.map RolesMsg (Roles.view authed.roles)
                 , Html.map DirectoryMsg (Directory.view authed.directory)
                 ]
 

@@ -7,6 +7,8 @@ module Api exposing
     , getSectors, getRoles, getCollaborators
     , SectorForm, encodeSectorForm
     , createSector, updateSector, deleteSector
+    , RoleForm, emptyRoleForm, roleFormFromRole, encodeRoleForm
+    , createRole, updateRole, deleteRole
     )
 
 {-| HTTP boundary to the ColabLife backend.
@@ -22,6 +24,8 @@ here is a root-relative path — no base URL or CORS to deal with.
 @docs getSectors, getRoles, getCollaborators
 @docs SectorForm, encodeSectorForm
 @docs createSector, updateSector, deleteSector
+@docs RoleForm, emptyRoleForm, roleFormFromRole, encodeRoleForm
+@docs createRole, updateRole, deleteRole
 
 -}
 
@@ -96,12 +100,22 @@ type alias Sector =
     }
 
 
-{-| A job title. Only the fields the read-only list needs are decoded; the
-backend carries more.
+{-| A job title with the legacy set of optional description fields. They are
+decoded as `Maybe` so an edit form can pre-fill from the current values.
 -}
 type alias Role =
     { id : String
     , name : String
+    , profileSuggestion : Maybe String
+    , objective : Maybe String
+    , requirementEducation : Maybe String
+    , requirementExperience : Maybe String
+    , requirementAttention : Maybe String
+    , requirementKnowledge : Maybe String
+    , requirementSkill : Maybe String
+    , requirementAttitude : Maybe String
+    , requirementDelivery : Maybe String
+    , observation : Maybe String
     , active : Bool
     }
 
@@ -127,14 +141,39 @@ sectorDecoder =
         (Decode.field "active" Decode.bool)
 
 
-{-| Decodes a single role (ignoring the description fields the list does not show).
+{-| Decodes a single role, including its optional description fields.
 -}
 roleDecoder : Decoder Role
 roleDecoder =
-    Decode.map3 Role
-        (Decode.field "id" Decode.string)
-        (Decode.field "name" Decode.string)
-        (Decode.field "active" Decode.bool)
+    Decode.succeed Role
+        |> andMap (Decode.field "id" Decode.string)
+        |> andMap (Decode.field "name" Decode.string)
+        |> andMap (optionalString "profile_suggestion")
+        |> andMap (optionalString "objective")
+        |> andMap (optionalString "requirement_education")
+        |> andMap (optionalString "requirement_experience")
+        |> andMap (optionalString "requirement_attention")
+        |> andMap (optionalString "requirement_knowledge")
+        |> andMap (optionalString "requirement_skill")
+        |> andMap (optionalString "requirement_attitude")
+        |> andMap (optionalString "requirement_delivery")
+        |> andMap (optionalString "observation")
+        |> andMap (Decode.field "active" Decode.bool)
+
+
+{-| Applies a decoded argument to a decoded function — lets us build records with
+more fields than `Decode.mapN` covers, without an extra dependency.
+-}
+andMap : Decoder a -> Decoder (a -> b) -> Decoder b
+andMap =
+    Decode.map2 (|>)
+
+
+{-| A nullable/absent string field, decoded as `Maybe String`.
+-}
+optionalString : String -> Decoder (Maybe String)
+optionalString name =
+    Decode.maybe (Decode.field name Decode.string)
 
 
 {-| Decodes a single collaborator.
@@ -237,3 +276,120 @@ updateSector token id form toMsg =
 deleteSector : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
 deleteSector token id toMsg =
     authRequest token "DELETE" ("/sectors/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)
+
+
+{-| The create/update payload for a role: `name` plus the legacy optional fields,
+each carried as a plain `String` (an empty string means "omit / leave untouched").
+-}
+type alias RoleForm =
+    { name : String
+    , profileSuggestion : String
+    , objective : String
+    , requirementEducation : String
+    , requirementExperience : String
+    , requirementAttention : String
+    , requirementKnowledge : String
+    , requirementSkill : String
+    , requirementAttitude : String
+    , requirementDelivery : String
+    , observation : String
+    }
+
+
+{-| A blank role form (the starting point for creating a role).
+-}
+emptyRoleForm : RoleForm
+emptyRoleForm =
+    { name = ""
+    , profileSuggestion = ""
+    , objective = ""
+    , requirementEducation = ""
+    , requirementExperience = ""
+    , requirementAttention = ""
+    , requirementKnowledge = ""
+    , requirementSkill = ""
+    , requirementAttitude = ""
+    , requirementDelivery = ""
+    , observation = ""
+    }
+
+
+{-| Pre-fills a role form from an existing role (for editing). Missing fields
+become empty strings.
+-}
+roleFormFromRole : Role -> RoleForm
+roleFormFromRole role =
+    { name = role.name
+    , profileSuggestion = Maybe.withDefault "" role.profileSuggestion
+    , objective = Maybe.withDefault "" role.objective
+    , requirementEducation = Maybe.withDefault "" role.requirementEducation
+    , requirementExperience = Maybe.withDefault "" role.requirementExperience
+    , requirementAttention = Maybe.withDefault "" role.requirementAttention
+    , requirementKnowledge = Maybe.withDefault "" role.requirementKnowledge
+    , requirementSkill = Maybe.withDefault "" role.requirementSkill
+    , requirementAttitude = Maybe.withDefault "" role.requirementAttitude
+    , requirementDelivery = Maybe.withDefault "" role.requirementDelivery
+    , observation = Maybe.withDefault "" role.observation
+    }
+
+
+{-| Encodes a role form: `name` is always present; each optional field is included
+only when it is non-blank, so empty inputs are omitted from the JSON body.
+-}
+encodeRoleForm : RoleForm -> Encode.Value
+encodeRoleForm form =
+    Encode.object
+        (( "name", Encode.string form.name )
+            :: List.filterMap optionalPair
+                [ ( "profile_suggestion", form.profileSuggestion )
+                , ( "objective", form.objective )
+                , ( "requirement_education", form.requirementEducation )
+                , ( "requirement_experience", form.requirementExperience )
+                , ( "requirement_attention", form.requirementAttention )
+                , ( "requirement_knowledge", form.requirementKnowledge )
+                , ( "requirement_skill", form.requirementSkill )
+                , ( "requirement_attitude", form.requirementAttitude )
+                , ( "requirement_delivery", form.requirementDelivery )
+                , ( "observation", form.observation )
+                ]
+        )
+
+
+{-| Turns a `(key, value)` pair into an encoded field, dropping blank values.
+-}
+optionalPair : ( String, String ) -> Maybe ( String, Encode.Value )
+optionalPair ( key, rawValue ) =
+    if String.trim rawValue == "" then
+        Nothing
+
+    else
+        Just ( key, Encode.string rawValue )
+
+
+{-| `POST /roles` — creates a role.
+-}
+createRole : String -> RoleForm -> (Result Http.Error Role -> msg) -> Cmd msg
+createRole token form toMsg =
+    authRequest token
+        "POST"
+        "/roles"
+        (Http.jsonBody (encodeRoleForm form))
+        (Http.expectJson toMsg roleDecoder)
+
+
+{-| `PATCH /roles/{id}` — updates a role.
+-}
+updateRole : String -> String -> RoleForm -> (Result Http.Error Role -> msg) -> Cmd msg
+updateRole token id form toMsg =
+    authRequest token
+        "PATCH"
+        ("/roles/" ++ id)
+        (Http.jsonBody (encodeRoleForm form))
+        (Http.expectJson toMsg roleDecoder)
+
+
+{-| `DELETE /roles/{id}` — deactivates a role (soft delete; backend replies `204`).
+-}
+deleteRole : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
+deleteRole token id toMsg =
+    authRequest token "DELETE" ("/roles/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)

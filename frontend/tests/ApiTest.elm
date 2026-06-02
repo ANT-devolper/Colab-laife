@@ -35,11 +35,27 @@ suite =
                 "{\"id\":\"s1\",\"name\":\"Engineering\",\"active\":true}"
                     |> Decode.decodeString Api.sectorDecoder
                     |> Expect.equal (Ok { id = "s1", name = "Engineering", active = True })
-        , test "roleDecoder reads id, name and active, ignoring extra fields" <|
+        , test "roleDecoder reads id, name, active and the optional description fields" <|
             \_ ->
-                "{\"id\":\"r1\",\"name\":\"Backend Engineer\",\"objective\":\"Build\",\"active\":true}"
+                "{\"id\":\"r1\",\"name\":\"Backend Engineer\",\"profile_suggestion\":null,\"objective\":\"Build\",\"requirement_education\":null,\"requirement_experience\":null,\"requirement_attention\":null,\"requirement_knowledge\":null,\"requirement_skill\":null,\"requirement_attitude\":null,\"requirement_delivery\":null,\"observation\":null,\"active\":true}"
                     |> Decode.decodeString Api.roleDecoder
-                    |> Expect.equal (Ok { id = "r1", name = "Backend Engineer", active = True })
+                    |> Expect.equal
+                        (Ok
+                            { id = "r1"
+                            , name = "Backend Engineer"
+                            , profileSuggestion = Nothing
+                            , objective = Just "Build"
+                            , requirementEducation = Nothing
+                            , requirementExperience = Nothing
+                            , requirementAttention = Nothing
+                            , requirementKnowledge = Nothing
+                            , requirementSkill = Nothing
+                            , requirementAttitude = Nothing
+                            , requirementDelivery = Nothing
+                            , observation = Nothing
+                            , active = True
+                            }
+                        )
         , test "collaboratorDecoder reads a present email" <|
             \_ ->
                 "{\"id\":\"c1\",\"name\":\"Alice\",\"email\":\"alice@acme.test\",\"is_manager\":true}"
@@ -74,4 +90,38 @@ suite =
                 Api.encodeSectorForm { name = "Engineering" }
                     |> Encode.encode 0
                     |> Expect.equal "{\"name\":\"Engineering\"}"
+        , test "encodeRoleForm includes name and only the non-empty optional fields" <|
+            \_ ->
+                Api.encodeRoleForm
+                    { name = "Engineer"
+                    , profileSuggestion = ""
+                    , objective = "Build"
+                    , requirementEducation = ""
+                    , requirementExperience = ""
+                    , requirementAttention = ""
+                    , requirementKnowledge = ""
+                    , requirementSkill = "Rust"
+                    , requirementAttitude = ""
+                    , requirementDelivery = ""
+                    , observation = ""
+                    }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"name\":\"Engineer\",\"objective\":\"Build\",\"requirement_skill\":\"Rust\"}"
+        , test "encodeRoleForm of a name-only form omits every optional field" <|
+            \_ ->
+                Api.encodeRoleForm
+                    { name = "Engineer"
+                    , profileSuggestion = ""
+                    , objective = ""
+                    , requirementEducation = ""
+                    , requirementExperience = ""
+                    , requirementAttention = ""
+                    , requirementKnowledge = ""
+                    , requirementSkill = ""
+                    , requirementAttitude = ""
+                    , requirementDelivery = ""
+                    , observation = ""
+                    }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"name\":\"Engineer\"}"
         ]

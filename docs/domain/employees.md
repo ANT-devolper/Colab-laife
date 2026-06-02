@@ -19,6 +19,8 @@ most other modules attach to (notes, feedback, DISC, tasks).
   `role` table in the tenant schema (`name` plus the optional `profile_suggestion`,
   `objective`, the `requirement_*` breakdown and `observation`, `active`, timestamps), with
   RBAC-guarded CRUD at `/roles` (`role.{read,create,update,delete}`); removal is a soft delete.
+  The Elm SPA offers full write for roles (create / edit the whole field set / deactivate) via
+  `Page/Roles.elm`.
 - **Collaborator** — a person managed inside a tenant. ✅ Implemented as the `collaborator`
   table in the tenant schema. Distinct from **user** (a login identity in `public.users`); the
   collaborator↔user link is by value (`user_id`, no cross-schema FK), and a collaborator
@@ -41,9 +43,10 @@ most other modules attach to (notes, feedback, DISC, tasks).
 ## Status
 
 Core implemented. The module's tables live in the tenant schema (`TenantMigrator`): `sector`,
-`role` and `collaborator` exist with their RBAC-guarded CRUD. Still deferred: the
+`role` and `collaborator` exist with their RBAC-guarded CRUD. The Elm SPA has write CRUD for
+`sector` and `role` (`collaborator` write is the next slice). Still deferred: the
 org-hierarchy/"accessible collaborators" service (only the `manager_id` column exists for now),
-write CRUD from the Elm UI, and multi-company (`company_info`/`company_id`).
+collaborator write CRUD from the Elm UI, and multi-company (`company_info`/`company_id`).
 
 ## Reference
 

@@ -250,3 +250,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Page.Directory` (collaborators and roles). Unit-tested with `elm-test` (the sector encoder)
   and end-to-end with Playwright (`e2e/tests/sectors-write.spec.ts`: sign in → create → inline
   rename → deactivate). The backend is unchanged (the `/sectors` write routes already existed).
+- Role write UI in the Elm SPA: `Page/Roles.elm` lists roles and offers a single form that
+  carries the full legacy field set (name plus the optional `profile_suggestion`, `objective`
+  and `requirement_*`/`observation` text areas), serving both create and edit (pre-filled from
+  the row), plus deactivate; the list is re-fetched after each successful mutation. `Api.elm`
+  gains `createRole`/`updateRole`/`deleteRole`, the pure `encodeRoleForm` (omits blank optional
+  fields) and `roleFormFromRole`, and its `roleDecoder`/`Role` now carry every description
+  field so an edit can pre-fill. `Main.elm` composes `Page.Roles`; `Page.Directory` is now
+  collaborators-only. Unit-tested with `elm-test` (the role encoder and the extended decoder)
+  and end-to-end with Playwright (`e2e/tests/roles-write.spec.ts`: sign in → create → edit →
+  deactivate). The backend is unchanged (the `/roles` write routes already existed).

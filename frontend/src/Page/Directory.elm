@@ -1,16 +1,16 @@
 module Page.Directory exposing (Model, Msg, init, update, view)
 
-{-| Read-only tables of the tenant's collaborators and roles. (Sectors moved to
-`Page.Sectors`, which adds write actions; collaborators and roles stay read-only
-until their own write slices.) Each list is fetched on entry with the session
-token; the view shows a loading, empty, error or populated state per list.
+{-| Read-only table of the tenant's collaborators. (Sectors and roles moved to
+`Page.Sectors`/`Page.Roles`, which add write actions; collaborators stay
+read-only until their own write slice.) The list is fetched on entry with the
+session token; the view shows a loading, empty, error or populated state.
 
 @docs Model, Msg, init, update, view
 
 -}
 
 import Api
-import Html exposing (Html, div, em, h2, p, section, table, tbody, td, text, th, thead, tr)
+import Html exposing (Html, em, h2, p, section, table, tbody, td, text, th, thead, tr)
 import Html.Attributes exposing (class)
 import Http
 
@@ -23,47 +23,36 @@ type Load a
     | Failed
 
 
-{-| Page state: the token plus each list's load status.
+{-| Page state: the token plus the collaborators' load status.
 -}
 type alias Model =
     { token : String
     , collaborators : Load (List Api.Collaborator)
-    , roles : Load (List Api.Role)
     }
 
 
-{-| One message per list response.
+{-| The collaborators response.
 -}
 type Msg
     = GotCollaborators (Result Http.Error (List Api.Collaborator))
-    | GotRoles (Result Http.Error (List Api.Role))
 
 
-{-| Starts every list as `Loading` and fires the authenticated fetches.
+{-| Starts loading and fires the authenticated fetch.
 -}
 init : String -> ( Model, Cmd Msg )
 init token =
-    ( { token = token
-      , collaborators = Loading
-      , roles = Loading
-      }
-    , Cmd.batch
-        [ Api.getCollaborators token GotCollaborators
-        , Api.getRoles token GotRoles
-        ]
+    ( { token = token, collaborators = Loading }
+    , Api.getCollaborators token GotCollaborators
     )
 
 
-{-| Records each list's outcome.
+{-| Records the list's outcome.
 -}
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
         GotCollaborators result ->
             ( { model | collaborators = fromResult result }, Cmd.none )
-
-        GotRoles result ->
-            ( { model | roles = fromResult result }, Cmd.none )
 
 
 fromResult : Result Http.Error a -> Load a
@@ -76,31 +65,13 @@ fromResult result =
             Failed
 
 
-{-| The two read-only sections.
+{-| The read-only collaborators section.
 -}
 view : Model -> Html Msg
 view model =
-    div [ class "directory" ]
-        [ viewList "Collaborators"
-            "No collaborators yet."
-            [ "Name", "Email" ]
-            collaboratorRow
-            model.collaborators
-        , viewList "Roles"
-            "No roles yet."
-            [ "Name" ]
-            namedRow
-            (mapLoad (List.map .name) model.roles)
-        ]
-
-
-{-| Renders one section: a heading and either a status line or a table.
--}
-viewList : String -> String -> List String -> (a -> Html msg) -> Load (List a) -> Html msg
-viewList title emptyMessage headers rowView load =
     section [ class "directory-section" ]
-        [ h2 [] [ text title ]
-        , case load of
+        [ h2 [] [ text "Collaborators" ]
+        , case model.collaborators of
             Loading ->
                 p [ class "status" ] [ text "Loading…" ]
 
@@ -108,12 +79,12 @@ viewList title emptyMessage headers rowView load =
                 p [ class "status error" ] [ text "Could not load this list." ]
 
             Loaded [] ->
-                p [ class "status empty" ] [ em [] [ text emptyMessage ] ]
+                p [ class "status empty" ] [ em [] [ text "No collaborators yet." ] ]
 
-            Loaded items ->
+            Loaded collaborators ->
                 table []
-                    [ thead [] [ tr [] (List.map (\h -> th [] [ text h ]) headers) ]
-                    , tbody [] (List.map rowView items)
+                    [ thead [] [ tr [] [ th [] [ text "Name" ], th [] [ text "Email" ] ] ]
+                    , tbody [] (List.map collaboratorRow collaborators)
                     ]
         ]
 
@@ -124,21 +95,3 @@ collaboratorRow collaborator =
         [ td [] [ text collaborator.name ]
         , td [] [ text (Maybe.withDefault "—" collaborator.email) ]
         ]
-
-
-namedRow : String -> Html msg
-namedRow name =
-    tr [] [ td [] [ text name ] ]
-
-
-mapLoad : (a -> b) -> Load a -> Load b
-mapLoad f load =
-    case load of
-        Loading ->
-            Loading
-
-        Failed ->
-            Failed
-
-        Loaded value ->
-            Loaded (f value)

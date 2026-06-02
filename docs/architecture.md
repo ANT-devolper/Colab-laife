@@ -18,9 +18,10 @@ Elm SPA  ──HTTP/JSON──>  Axum backend  ──SeaORM──>  PostgreSQL
 tenant provisioning, credential login (JWT), the authenticated request pipeline (per-request
 tenant resolution + auth extractor), granular RBAC (per-tenant permissions + per-route guard)
 and the `sector`/`role`/`collaborator` tenant-domain resources exist today — the foundation and
-the cadastro backend are complete. The Elm frontend has its foundation: a login page that
-obtains a session token, served from the Axum binary on the same origin. 🚧 Read-only lists in
-the SPA and the remaining business modules with their endpoints are planned.
+the cadastro backend are complete. The Elm frontend, served from the Axum binary on the same
+origin, has a login page, write CRUD for sectors and roles, and a read-only collaborators
+directory. 🚧 Collaborator write in the SPA and the remaining business modules with their
+endpoints are planned.
 
 ## Backend workspace
 
@@ -232,10 +233,14 @@ over HTTP/JSON. Current scope:
   offers full write — a create form, inline rename and deactivate — re-fetching the list after
   each successful mutation. The write calls (`createSector`/`updateSector`/`deleteSector`) live
   in `Api.elm` over a shared authenticated-request helper. ✅
-- A read-only **Directory** (`Page/Directory.elm`): collaborators and roles, each rendered as a
-  table with a loading / empty / error state. ✅
-- Write actions from the UI for roles and collaborators are 🚧 planned next (same pattern as
-  sectors).
+- **Role management** (`Page/Roles.elm`): a single form carrying the full legacy field set
+  (name plus the optional description text areas) serves both create and edit (pre-filled from
+  the row), plus deactivate; same re-fetch-after-mutation pattern. Write calls
+  (`createRole`/`updateRole`/`deleteRole`) and the form encoder live in `Api.elm`. ✅
+- A read-only **Directory** (`Page/Directory.elm`): collaborators, rendered as a table with a
+  loading / empty / error state. ✅
+- Write actions from the UI for collaborators are 🚧 planned next (same pattern as sectors and
+  roles).
 
 **Single-origin delivery** ([ADR 0011](adr/0011-serve-spa-from-axum.md)): the Axum binary
 serves the built SPA itself, so the browser only ever talks to one origin (no CORS). ✅
@@ -268,12 +273,13 @@ Levels:
 - **Backend integration** — `axum-test` (real HTTP through the app) with `testcontainers`
   (a throwaway PostgreSQL in Docker). Static SPA serving is integration-tested with a
   `MockDatabase` (no Docker).
-- **Frontend unit** — `elm-test`. ✅ Covers the API boundary's pure parts (the login and sector
-  encoders and the response/list decoders).
+- **Frontend unit** — `elm-test`. ✅ Covers the API boundary's pure parts (the login, sector
+  and role form encoders and the response/list decoders).
 - **E2E** — Playwright. ✅ Drives the real stack: Playwright's `webServer`
   (`e2e/scripts/e2e-stack.mjs`) boots PostgreSQL, migrates, builds the SPA and runs the API
   serving it; the specs provision a tenant via the API, sign in through the SPA, and assert the
-  login/empty-directory path and the sector write flow (create → rename → deactivate). The
+  login/empty-directory path and the sector and role write flows (create → edit → deactivate).
+  The
   chromium project is the gate (`npm test`); Firefox/WebKit are available via `npm run test:all`
   once their system libraries are installed.
 
