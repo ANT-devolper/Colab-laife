@@ -9,6 +9,7 @@ use tower_http::services::{ServeDir, ServeFile};
 mod auth;
 mod collaborators;
 pub mod extract;
+mod feedback;
 mod health;
 mod organizations;
 mod roles;
@@ -63,6 +64,11 @@ pub fn build_router(
         .route(
             "/collaborators/{id}",
             patch(collaborators::update).delete(collaborators::delete),
+        )
+        .route("/feedbacks", get(feedback::list).post(feedback::create))
+        .route(
+            "/feedbacks/{id}",
+            patch(feedback::update).delete(feedback::delete),
         )
         .with_state(state)
 }

@@ -92,7 +92,7 @@ fn timestamp<T: IntoIden>(name: T) -> ColumnDef {
 }
 
 #[derive(DeriveIden)]
-enum Collaborator {
+pub enum Collaborator {
     Table,
     Id,
     Name,

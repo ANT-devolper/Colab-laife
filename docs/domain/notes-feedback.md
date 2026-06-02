@@ -1,33 +1,45 @@
 # Notes & feedback
 
-> **Status:** 🚧 planned — not implemented yet.
+> **Status:** 🚧 partially implemented — the `feedback` event exists with RBAC-guarded CRUD;
+> its expectation-contract children, `feedback_behavior` and annotations (notes) are planned.
 
 ## Purpose
 
-Let people record continuous notes and exchange structured feedback (peer-to-peer and
-manager-to-report) about employees, instead of relying only on annual reviews.
+Let people record continuous notes and exchange structured feedback (manager-to-report) about
+collaborators, instead of relying only on annual reviews.
 
 ## Key concepts / entities
 
-- **Note** — a free-form entry authored by a user about an employee, with a timestamp.
-- **Feedback** — a structured message (e.g. positive / constructive) directed at an
-  employee, attributed to its author.
+- **Feedback** — ✅ a structured feedback event about a **collaborator**, implemented as the
+  `feedback` table in the tenant schema (`collaborator_id` FK, `feedback_date`, optional
+  `next_feedback_date`, the expectation-contract observations — public and private —, a free
+  `status`, `active`, timestamps). Manager and sector are **not** stored; they are derived from
+  the collaborator at read time. RBAC-guarded CRUD at `/feedbacks`
+  (`feedback.{read,create,update,delete}`); the list accepts an optional `?collaborator_id=`
+  filter and `create` rejects an unknown collaborator with `422`; removal is a soft delete.
+- **Expectation contract** — 🚧 planned: per-feedback checklists of goals and behaviours
+  (`description`/`done`).
+- **Feedback behaviour** — 🚧 planned: the DISC-values scoring lines of a feedback
+  (`value_description`, `behavior_description`, `score`, …).
+- **Annotation (note)** — 🚧 planned: quick notes about a collaborator (scores, a main note,
+  observation). Attachments (S3) and feedback messaging (notifications) stay deferred.
 
 ## Main flows
 
-- Author a note or feedback about an employee.
-- List the notes/feedback for an employee over time.
-- Edit or remove one's own entries (subject to permissions).
+- Create / edit / remove a feedback for a collaborator (subject to permissions). ✅
+- List the feedback for a collaborator over time (newest first). ✅
+- Author quick notes about a collaborator. 🚧
 
 ## Permissions / roles
 
-- Authors manage their own entries.
-- Visibility rules (private to author, visible to managers, visible to the subject) are
-  defined when the module is designed.
+- Guarded by the `feedback.*` resources (RBAC); the seeded administrator profile holds them.
+- Finer visibility rules (e.g. the private observation visible only to managers) are deferred.
 
-## Status
+## Deferred (out of scope for now)
 
-Planned. No entities or endpoints exist yet.
+- AI/transcription of feedback recordings (`feedback_record`, OpenAI scripts).
+- Attachments on notes (needs the `Storage` trait, Phase 7).
+- Feedback messaging/notifications (needs the `Mailer`/notifications crosscut, Phase 7).
 
 ## Reference
 

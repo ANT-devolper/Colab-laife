@@ -101,3 +101,13 @@ async fn tenant_migrations_create_the_collaborator_table() {
         "expected tenant table `collaborator` to exist"
     );
 }
+
+#[tokio::test]
+async fn tenant_migrations_create_the_feedback_table() {
+    let db = setup().await;
+
+    assert!(
+        table_exists(&db, SCHEMA, "feedback").await,
+        "expected tenant table `feedback` to exist"
+    );
+}

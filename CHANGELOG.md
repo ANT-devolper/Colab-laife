@@ -186,3 +186,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   through the SPA and asserts the empty directory. The chromium project is the gate
   (`npm test` / `just e2e`); Firefox/WebKit are available via `npm run test:all` once their
   system libraries are installed. The `justfile` gains an `e2e` recipe.
+- Feedback, the first people-domain resource (Phase 3A): `TenantMigrator` now creates the
+  `feedback` table — a structured feedback event about a collaborator (`collaborator_id` FK,
+  `feedback_date`, optional `next_feedback_date`, the expectation-contract observations
+  `expectation_contract_observation`/`…_private`, `status`, an `active` soft-delete flag and
+  timestamps). Redesigned from the legacy model: manager/sector are **not** stored (they are
+  derived from the collaborator at read time) and AI/transcription is out of scope.
+  `entity::feedback` maps it with a relation to collaborator. The `Resource` catalog gains
+  `feedback.{read,create,update,delete}` (auto-granted to the seeded administrator profile), and
+  `api::feedback` exposes RBAC-guarded CRUD over the caller's tenant schema: `GET`/`POST
+  /feedbacks`, `PATCH`/`DELETE /feedbacks/{id}`. `GET` lists active feedback newest-first and
+  accepts an optional `?collaborator_id=` filter; `create` rejects an unknown/inactive
+  collaborator with `422`; `PATCH` writes only the fields present in the body; removal is a soft
+  delete. Integration-tested (admin create → list filtered by collaborator → partial update →
+  soft delete; unknown collaborator → `422`; permissionless member → `403`) plus a migration
+  test (the `feedback` table lands in the migrated tenant schema).

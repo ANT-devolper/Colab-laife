@@ -29,9 +29,9 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles` and `/collaborators` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators CRUD |
-| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator` |
-| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles`, `/collaborators` and `/feedbacks` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators + feedback CRUD |
+| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator`, `feedback` |
+| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` + `feedback` |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
 
 The router is created by `build_router(db, database_url, jwt_secret)` in
@@ -60,9 +60,9 @@ Migrations are split accordingly in `backend/crates/migration/src/lib.rs`:
 - `PublicMigrator` — migrations for the `public` schema; run day-to-day via
   `cargo run -p migration`. Currently: create `organizations`, then `users`. ✅
 - `TenantMigrator` — migrations applied inside each tenant's schema, run by the tenant
-  provisioning flow. Currently: the RBAC tables (see Authorization) and the `sector`, `role`
-  and `collaborator` tables (see Tenant domain). ✅ More tenant tables are appended as the
-  domain model grows. 🚧
+  provisioning flow. Currently: the RBAC tables (see Authorization) and the `sector`, `role`,
+  `collaborator` and `feedback` tables (see Tenant domain). ✅ More tenant tables are appended
+  as the domain model grows. 🚧
 
 ### Tenant provisioning
 
@@ -182,6 +182,17 @@ removal is a **soft delete** (`active = false`); listings filter to active rows.
   sector/role/manager reference with `422`, and `PATCH` updates only the fields present in the
   body. The org-hierarchy/"accessible collaborators" service is 🚧 deferred (only the
   `manager_id` column exists for now). ✅
+- **`feedback`** (`backend/crates/entity/src/feedback.rs`, migration
+  `m20260601_000007_create_feedback`) — the first people domain (depends on `collaborator`): a
+  structured feedback event with `collaborator_id` (FK), `feedback_date`, optional
+  `next_feedback_date`, the expectation-contract observations (`…_observation` and
+  `…_observation_private`), `status`, `active` (soft-delete flag) and timestamps. Manager/sector
+  are **not** stored — they are derived from the collaborator at read time; AI/transcription is
+  out of scope. Exposed by `api::feedback` as `GET`/`POST /feedbacks` and `PATCH`/`DELETE
+  /feedbacks/{id}`, guarded by `feedback.{read,create,update,delete}`; `GET` lists newest-first
+  with an optional `?collaborator_id=` filter, and `create` rejects an unknown collaborator with
+  `422`. The expectation-contract children, `feedback_behavior` and annotations are 🚧 planned
+  next. ✅
 
 ## Frontend & delivery
 

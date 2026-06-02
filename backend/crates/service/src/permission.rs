@@ -35,6 +35,10 @@ pub enum Resource {
     CollaboratorCreate,
     CollaboratorUpdate,
     CollaboratorDelete,
+    FeedbackRead,
+    FeedbackCreate,
+    FeedbackUpdate,
+    FeedbackDelete,
 }
 
 impl Resource {
@@ -59,6 +63,10 @@ impl Resource {
             Self::CollaboratorCreate => "collaborator.create",
             Self::CollaboratorUpdate => "collaborator.update",
             Self::CollaboratorDelete => "collaborator.delete",
+            Self::FeedbackRead => "feedback.read",
+            Self::FeedbackCreate => "feedback.create",
+            Self::FeedbackUpdate => "feedback.update",
+            Self::FeedbackDelete => "feedback.delete",
         }
     }
 
@@ -83,6 +91,10 @@ impl Resource {
             Self::CollaboratorCreate => "Create collaborators",
             Self::CollaboratorUpdate => "Update collaborators",
             Self::CollaboratorDelete => "Remove collaborators",
+            Self::FeedbackRead => "View feedback",
+            Self::FeedbackCreate => "Create feedback",
+            Self::FeedbackUpdate => "Update feedback",
+            Self::FeedbackDelete => "Remove feedback",
         }
     }
 
@@ -107,6 +119,10 @@ impl Resource {
             Self::CollaboratorCreate,
             Self::CollaboratorUpdate,
             Self::CollaboratorDelete,
+            Self::FeedbackRead,
+            Self::FeedbackCreate,
+            Self::FeedbackUpdate,
+            Self::FeedbackDelete,
         ]
     }
 }
