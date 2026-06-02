@@ -201,3 +201,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   delete. Integration-tested (admin create → list filtered by collaborator → partial update →
   soft delete; unknown collaborator → `422`; permissionless member → `403`) plus a migration
   test (the `feedback` table lands in the migrated tenant schema).
+- Expectation-contract items (Phase 3A): `TenantMigrator` now creates the
+  `expectation_contract_item` table — a checklist entry of a feedback's expectation contract
+  (`feedback_id` FK, a `kind` discriminator `goal`/`behavior`, `description`, `done`, an `active`
+  soft-delete flag and timestamps). Redesigned from the legacy model, which split this into two
+  identical tables (`expectation_contract_goals` and `expectation_contract_behavior`); we unify
+  them with `kind`. `entity::expectation_contract_item` maps it with a relation to feedback. The
+  `Resource` catalog gains `expectation.{read,create,update,delete}` (auto-granted to the seeded
+  administrator profile), and `api::expectation_items` exposes RBAC-guarded CRUD over the tenant
+  schema: `GET`/`POST /expectation-items`, `PATCH`/`DELETE /expectation-items/{id}`. `GET`
+  accepts optional `?feedback_id=` and `?kind=` filters; `create` rejects an invalid `kind` or an
+  unknown feedback with `422`; `PATCH` writes only the fields present in the body; removal is a
+  soft delete. Integration-tested (admin create goal + behavior → list filtered by feedback and
+  by kind → mark done → soft delete; invalid kind → `422`; unknown feedback → `422`;
+  permissionless member → `403`) plus a migration test.

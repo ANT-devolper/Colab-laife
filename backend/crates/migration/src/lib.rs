@@ -28,6 +28,7 @@ impl MigratorTrait for TenantMigrator {
             Box::new(tenant::m20260601_000005_create_role::Migration),
             Box::new(tenant::m20260601_000006_create_collaborator::Migration),
             Box::new(tenant::m20260601_000007_create_feedback::Migration),
+            Box::new(tenant::m20260601_000008_create_expectation_contract_item::Migration),
         ]
     }
 }

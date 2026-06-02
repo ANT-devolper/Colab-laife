@@ -1,7 +1,7 @@
 # Notes & feedback
 
-> **Status:** 🚧 partially implemented — the `feedback` event exists with RBAC-guarded CRUD;
-> its expectation-contract children, `feedback_behavior` and annotations (notes) are planned.
+> **Status:** 🚧 partially implemented — the `feedback` event and its expectation-contract items
+> exist with RBAC-guarded CRUD; `feedback_behavior` and annotations (notes) are planned.
 
 ## Purpose
 
@@ -17,8 +17,12 @@ collaborators, instead of relying only on annual reviews.
   the collaborator at read time. RBAC-guarded CRUD at `/feedbacks`
   (`feedback.{read,create,update,delete}`); the list accepts an optional `?collaborator_id=`
   filter and `create` rejects an unknown collaborator with `422`; removal is a soft delete.
-- **Expectation contract** — 🚧 planned: per-feedback checklists of goals and behaviours
-  (`description`/`done`).
+- **Expectation contract** — ✅ per-feedback checklist of goals and behaviours, implemented as
+  the `expectation_contract_item` table (one row per item, a `kind` discriminator `goal`/
+  `behavior`, `description`, `done`, `active`). The legacy model used two identical tables; we
+  unify them with `kind`. RBAC-guarded CRUD at `/expectation-items`
+  (`expectation.{read,create,update,delete}`), with optional `?feedback_id=`/`?kind=` filters;
+  removal is a soft delete.
 - **Feedback behaviour** — 🚧 planned: the DISC-values scoring lines of a feedback
   (`value_description`, `behavior_description`, `score`, …).
 - **Annotation (note)** — 🚧 planned: quick notes about a collaborator (scores, a main note,

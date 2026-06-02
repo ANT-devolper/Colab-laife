@@ -8,6 +8,7 @@ use tower_http::services::{ServeDir, ServeFile};
 
 mod auth;
 mod collaborators;
+mod expectation_items;
 pub mod extract;
 mod feedback;
 mod health;
@@ -69,6 +70,14 @@ pub fn build_router(
         .route(
             "/feedbacks/{id}",
             patch(feedback::update).delete(feedback::delete),
+        )
+        .route(
+            "/expectation-items",
+            get(expectation_items::list).post(expectation_items::create),
+        )
+        .route(
+            "/expectation-items/{id}",
+            patch(expectation_items::update).delete(expectation_items::delete),
         )
         .with_state(state)
 }

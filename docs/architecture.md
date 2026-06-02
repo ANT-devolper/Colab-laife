@@ -29,9 +29,9 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles`, `/collaborators` and `/feedbacks` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators + feedback CRUD |
-| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator`, `feedback` |
-| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` + `feedback` |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles`, `/collaborators`, `/feedbacks` and `/expectation-items` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators + feedback + expectation-contract CRUD |
+| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator`, `feedback`, `expectation_contract_item` |
+| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` + `feedback` + `expectation_contract_item` |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
 
 The router is created by `build_router(db, database_url, jwt_secret)` in
@@ -61,8 +61,8 @@ Migrations are split accordingly in `backend/crates/migration/src/lib.rs`:
   `cargo run -p migration`. Currently: create `organizations`, then `users`. ✅
 - `TenantMigrator` — migrations applied inside each tenant's schema, run by the tenant
   provisioning flow. Currently: the RBAC tables (see Authorization) and the `sector`, `role`,
-  `collaborator` and `feedback` tables (see Tenant domain). ✅ More tenant tables are appended
-  as the domain model grows. 🚧
+  `collaborator`, `feedback` and `expectation_contract_item` tables (see Tenant domain). ✅ More
+  tenant tables are appended as the domain model grows. 🚧
 
 ### Tenant provisioning
 
@@ -191,8 +191,17 @@ removal is a **soft delete** (`active = false`); listings filter to active rows.
   out of scope. Exposed by `api::feedback` as `GET`/`POST /feedbacks` and `PATCH`/`DELETE
   /feedbacks/{id}`, guarded by `feedback.{read,create,update,delete}`; `GET` lists newest-first
   with an optional `?collaborator_id=` filter, and `create` rejects an unknown collaborator with
-  `422`. The expectation-contract children, `feedback_behavior` and annotations are 🚧 planned
-  next. ✅
+  `422`. ✅
+- **`expectation_contract_item`** (`backend/crates/entity/src/expectation_contract_item.rs`,
+  migration `m20260601_000008_create_expectation_contract_item`) — a checklist entry of a
+  feedback's expectation contract: `feedback_id` (FK), a `kind` discriminator
+  (`goal`/`behavior`), `description`, `done`, `active`, timestamps. **Redesign:** the legacy
+  model split this into two identical tables (`expectation_contract_goals` and
+  `expectation_contract_behavior`); we unify them with `kind`. Exposed by
+  `api::expectation_items` as `GET`/`POST /expectation-items` and `PATCH`/`DELETE
+  /expectation-items/{id}`, guarded by `expectation.{read,create,update,delete}`; `GET` accepts
+  optional `?feedback_id=`/`?kind=` filters, and `create` rejects an invalid `kind` or unknown
+  feedback with `422`. `feedback_behavior` and annotations are 🚧 planned next. ✅
 
 ## Frontend & delivery
 
