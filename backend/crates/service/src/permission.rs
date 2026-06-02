@@ -43,6 +43,10 @@ pub enum Resource {
     ExpectationCreate,
     ExpectationUpdate,
     ExpectationDelete,
+    FeedbackBehaviorRead,
+    FeedbackBehaviorCreate,
+    FeedbackBehaviorUpdate,
+    FeedbackBehaviorDelete,
 }
 
 impl Resource {
@@ -75,6 +79,10 @@ impl Resource {
             Self::ExpectationCreate => "expectation.create",
             Self::ExpectationUpdate => "expectation.update",
             Self::ExpectationDelete => "expectation.delete",
+            Self::FeedbackBehaviorRead => "feedback_behavior.read",
+            Self::FeedbackBehaviorCreate => "feedback_behavior.create",
+            Self::FeedbackBehaviorUpdate => "feedback_behavior.update",
+            Self::FeedbackBehaviorDelete => "feedback_behavior.delete",
         }
     }
 
@@ -107,6 +115,10 @@ impl Resource {
             Self::ExpectationCreate => "Create expectation contract items",
             Self::ExpectationUpdate => "Update expectation contract items",
             Self::ExpectationDelete => "Remove expectation contract items",
+            Self::FeedbackBehaviorRead => "View feedback behaviors",
+            Self::FeedbackBehaviorCreate => "Create feedback behaviors",
+            Self::FeedbackBehaviorUpdate => "Update feedback behaviors",
+            Self::FeedbackBehaviorDelete => "Remove feedback behaviors",
         }
     }
 
@@ -139,6 +151,10 @@ impl Resource {
             Self::ExpectationCreate,
             Self::ExpectationUpdate,
             Self::ExpectationDelete,
+            Self::FeedbackBehaviorRead,
+            Self::FeedbackBehaviorCreate,
+            Self::FeedbackBehaviorUpdate,
+            Self::FeedbackBehaviorDelete,
         ]
     }
 }

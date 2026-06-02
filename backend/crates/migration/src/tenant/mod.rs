@@ -7,3 +7,4 @@ pub mod m20260601_000005_create_role;
 pub mod m20260601_000006_create_collaborator;
 pub mod m20260601_000007_create_feedback;
 pub mod m20260601_000008_create_expectation_contract_item;
+pub mod m20260601_000009_create_feedback_behavior;

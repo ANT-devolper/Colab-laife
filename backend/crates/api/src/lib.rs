@@ -11,6 +11,7 @@ mod collaborators;
 mod expectation_items;
 pub mod extract;
 mod feedback;
+mod feedback_behaviors;
 mod health;
 mod organizations;
 mod roles;
@@ -78,6 +79,14 @@ pub fn build_router(
         .route(
             "/expectation-items/{id}",
             patch(expectation_items::update).delete(expectation_items::delete),
+        )
+        .route(
+            "/feedback-behaviors",
+            get(feedback_behaviors::list).post(feedback_behaviors::create),
+        )
+        .route(
+            "/feedback-behaviors/{id}",
+            patch(feedback_behaviors::update).delete(feedback_behaviors::delete),
         )
         .with_state(state)
 }

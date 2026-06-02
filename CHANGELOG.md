@@ -215,3 +215,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   soft delete. Integration-tested (admin create goal + behavior → list filtered by feedback and
   by kind → mark done → soft delete; invalid kind → `422`; unknown feedback → `422`;
   permissionless member → `403`) plus a migration test.
+- Feedback behaviors (Phase 3A): `TenantMigrator` now creates the `feedback_behavior` table — a
+  scored DISC-values line of a feedback (`feedback_id` FK, required `value_description` and
+  `behavior_description`, optional `behavior_obs`/`value_instruction`, an integer `score`, an
+  `active` soft-delete flag and timestamps); `entity::feedback_behavior` maps it with a relation
+  to feedback. The `Resource` catalog gains `feedback_behavior.{read,create,update,delete}`
+  (auto-granted to the seeded administrator profile), and `api::feedback_behaviors` exposes
+  RBAC-guarded CRUD over the tenant schema: `GET`/`POST /feedback-behaviors`, `PATCH`/`DELETE
+  /feedback-behaviors/{id}`. `GET` accepts an optional `?feedback_id=` filter; `create` rejects
+  an unknown feedback with `422`; `PATCH` writes only the fields present in the body; removal is a
+  soft delete. Integration-tested (admin create → list filtered by feedback → partial update →
+  soft delete; unknown feedback → `422`; permissionless member → `403`) plus a migration test.

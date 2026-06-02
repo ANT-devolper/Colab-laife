@@ -29,9 +29,9 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles`, `/collaborators`, `/feedbacks` and `/expectation-items` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators + feedback + expectation-contract CRUD |
-| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator`, `feedback`, `expectation_contract_item` |
-| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` + `feedback` + `expectation_contract_item` |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles`, `/collaborators`, `/feedbacks`, `/expectation-items` and `/feedback-behaviors` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators + feedback + expectation-contract + feedback-behavior CRUD |
+| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator`, `feedback`, `expectation_contract_item`, `feedback_behavior` |
+| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` + `feedback` + `expectation_contract_item` + `feedback_behavior` |
 | `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
 
 The router is created by `build_router(db, database_url, jwt_secret)` in
@@ -201,7 +201,15 @@ removal is a **soft delete** (`active = false`); listings filter to active rows.
   `api::expectation_items` as `GET`/`POST /expectation-items` and `PATCH`/`DELETE
   /expectation-items/{id}`, guarded by `expectation.{read,create,update,delete}`; `GET` accepts
   optional `?feedback_id=`/`?kind=` filters, and `create` rejects an invalid `kind` or unknown
-  feedback with `422`. `feedback_behavior` and annotations are 🚧 planned next. ✅
+  feedback with `422`. ✅
+- **`feedback_behavior`** (`backend/crates/entity/src/feedback_behavior.rs`, migration
+  `m20260601_000009_create_feedback_behavior`) — a scored DISC-values line of a feedback:
+  `feedback_id` (FK), required `value_description`/`behavior_description`, optional
+  `behavior_obs`/`value_instruction`, an integer `score`, `active`, timestamps. Exposed by
+  `api::feedback_behaviors` as `GET`/`POST /feedback-behaviors` and `PATCH`/`DELETE
+  /feedback-behaviors/{id}`, guarded by `feedback_behavior.{read,create,update,delete}`; `GET`
+  accepts an optional `?feedback_id=` filter, and `create` rejects an unknown feedback with
+  `422`. Annotations are 🚧 planned next. ✅
 
 ## Frontend & delivery
 

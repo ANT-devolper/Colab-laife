@@ -121,3 +121,13 @@ async fn tenant_migrations_create_the_expectation_contract_item_table() {
         "expected tenant table `expectation_contract_item` to exist"
     );
 }
+
+#[tokio::test]
+async fn tenant_migrations_create_the_feedback_behavior_table() {
+    let db = setup().await;
+
+    assert!(
+        table_exists(&db, SCHEMA, "feedback_behavior").await,
+        "expected tenant table `feedback_behavior` to exist"
+    );
+}

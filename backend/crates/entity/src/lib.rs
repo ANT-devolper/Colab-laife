@@ -3,6 +3,7 @@
 pub mod collaborator;
 pub mod expectation_contract_item;
 pub mod feedback;
+pub mod feedback_behavior;
 pub mod organization;
 pub mod permission;
 pub mod role;
