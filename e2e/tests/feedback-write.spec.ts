@@ -67,6 +67,20 @@ test('admin creates, edits and deactivates a feedback', async ({ page, baseURL }
   await page.getByRole('listitem').filter({ hasText: 'Ship the SDK' }).getByRole('button', { name: 'Remove' }).click();
   await expect(page.getByRole('checkbox', { name: 'Ship the SDK' })).toHaveCount(0);
 
+  // Scored behaviors: add one with a score, edit the score, then remove it.
+  await page.getByLabel('Value description').fill('Leadership');
+  await page.getByLabel('Behavior description').fill('Delegates clearly');
+  await page.getByLabel('Behavior score').fill('4');
+  await page.getByRole('button', { name: 'Add scored behavior' }).click();
+  await expect(page.getByRole('cell', { name: 'Leadership', exact: true })).toBeVisible();
+  await expect(page.getByRole('cell', { name: '4', exact: true })).toBeVisible();
+  await page.getByRole('row', { name: /Leadership/ }).getByRole('button', { name: 'Edit' }).click();
+  await page.getByLabel('Behavior score').fill('5');
+  await page.getByRole('button', { name: 'Save scored behavior' }).click();
+  await expect(page.getByRole('cell', { name: '5', exact: true })).toBeVisible();
+  await page.getByRole('row', { name: /Leadership/ }).getByRole('button', { name: 'Remove' }).click();
+  await expect(page.getByRole('cell', { name: 'Leadership', exact: true })).toHaveCount(0);
+
   // Deactivate the feedback — it leaves the (active-only) list.
   await page.getByRole('row', { name: /reviewed/ }).getByRole('button', { name: 'Deactivate' }).click();
   await expect(page.getByRole('cell', { name: 'reviewed', exact: true })).toHaveCount(0);

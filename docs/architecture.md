@@ -251,7 +251,9 @@ over HTTP/JSON. Current scope:
   converts the `YYYY-MM-DD` date inputs to RFC3339 — live in `Api.elm`. An "Open" action expands
   a feedback's **expectation contract**: two checklists (goals, behaviors) where items can be
   added, toggled (`done`) and removed (`createExpectationItem`/`updateExpectationItem`/
-  `deleteExpectationItem`). The scored behaviors and the annotations UI are 🚧 next.
+  `deleteExpectationItem`), plus a **scored behaviors** table (value/behavior/observation/
+  instruction + integer score) with create/edit/remove (`createFeedbackBehavior`/
+  `updateFeedbackBehavior`/`deleteFeedbackBehavior`). The annotations UI is 🚧 next.
 
 **Single-origin delivery** ([ADR 0011](adr/0011-serve-spa-from-axum.md)): the Axum binary
 serves the built SPA itself, so the browser only ever talks to one origin (no CORS). ✅

@@ -17,6 +17,9 @@ module Api exposing
     , ExpectationItem, expectationItemDecoder, getExpectationItems
     , ExpectationItemForm, encodeExpectationItemForm
     , createExpectationItem, updateExpectationItem, deleteExpectationItem
+    , FeedbackBehavior, feedbackBehaviorDecoder, getFeedbackBehaviors
+    , FeedbackBehaviorForm, emptyFeedbackBehaviorForm, feedbackBehaviorFormFromBehavior, encodeFeedbackBehaviorForm
+    , createFeedbackBehavior, updateFeedbackBehavior, deleteFeedbackBehavior
     )
 
 {-| HTTP boundary to the ColabLife backend.
@@ -42,6 +45,9 @@ here is a root-relative path — no base URL or CORS to deal with.
 @docs ExpectationItem, expectationItemDecoder, getExpectationItems
 @docs ExpectationItemForm, encodeExpectationItemForm
 @docs createExpectationItem, updateExpectationItem, deleteExpectationItem
+@docs FeedbackBehavior, feedbackBehaviorDecoder, getFeedbackBehaviors
+@docs FeedbackBehaviorForm, emptyFeedbackBehaviorForm, feedbackBehaviorFormFromBehavior, encodeFeedbackBehaviorForm
+@docs createFeedbackBehavior, updateFeedbackBehavior, deleteFeedbackBehavior
 
 -}
 
@@ -760,3 +766,133 @@ replies `204`).
 deleteExpectationItem : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
 deleteExpectationItem token id toMsg =
     authRequest token "DELETE" ("/expectation-items/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)
+
+
+
+-- FEEDBACK BEHAVIORS (scored DISC-values lines)
+
+
+{-| A scored behavior line of a feedback: a value + behavior description, optional
+observation/instruction, and an integer score.
+-}
+type alias FeedbackBehavior =
+    { id : String
+    , feedbackId : String
+    , valueDescription : String
+    , behaviorDescription : String
+    , behaviorObs : Maybe String
+    , valueInstruction : Maybe String
+    , score : Int
+    , active : Bool
+    }
+
+
+{-| Decodes a single feedback behavior.
+-}
+feedbackBehaviorDecoder : Decoder FeedbackBehavior
+feedbackBehaviorDecoder =
+    Decode.succeed FeedbackBehavior
+        |> andMap (Decode.field "id" Decode.string)
+        |> andMap (Decode.field "feedback_id" Decode.string)
+        |> andMap (Decode.field "value_description" Decode.string)
+        |> andMap (Decode.field "behavior_description" Decode.string)
+        |> andMap (optionalString "behavior_obs")
+        |> andMap (optionalString "value_instruction")
+        |> andMap (Decode.field "score" Decode.int)
+        |> andMap (Decode.field "active" Decode.bool)
+
+
+{-| `GET /feedback-behaviors?feedback_id=` — the scored behaviors of one feedback.
+-}
+getFeedbackBehaviors : String -> String -> (Result Http.Error (List FeedbackBehavior) -> msg) -> Cmd msg
+getFeedbackBehaviors token feedbackId toMsg =
+    authGet token
+        ("/feedback-behaviors?feedback_id=" ++ feedbackId)
+        (Decode.list feedbackBehaviorDecoder)
+        toMsg
+
+
+{-| The create/update payload for a scored behavior.
+-}
+type alias FeedbackBehaviorForm =
+    { feedbackId : String
+    , valueDescription : String
+    , behaviorDescription : String
+    , behaviorObs : String
+    , valueInstruction : String
+    , score : Int
+    }
+
+
+{-| A blank behavior form bound to a feedback (score starts at 0).
+-}
+emptyFeedbackBehaviorForm : String -> FeedbackBehaviorForm
+emptyFeedbackBehaviorForm feedbackId =
+    { feedbackId = feedbackId
+    , valueDescription = ""
+    , behaviorDescription = ""
+    , behaviorObs = ""
+    , valueInstruction = ""
+    , score = 0
+    }
+
+
+{-| Pre-fills a behavior form from an existing behavior (for editing).
+-}
+feedbackBehaviorFormFromBehavior : FeedbackBehavior -> FeedbackBehaviorForm
+feedbackBehaviorFormFromBehavior behavior =
+    { feedbackId = behavior.feedbackId
+    , valueDescription = behavior.valueDescription
+    , behaviorDescription = behavior.behaviorDescription
+    , behaviorObs = Maybe.withDefault "" behavior.behaviorObs
+    , valueInstruction = Maybe.withDefault "" behavior.valueInstruction
+    , score = behavior.score
+    }
+
+
+{-| Encodes a behavior form: `feedback_id`, the two descriptions and the integer
+`score` are always present; the observation and instruction are included only when
+non-blank.
+-}
+encodeFeedbackBehaviorForm : FeedbackBehaviorForm -> Encode.Value
+encodeFeedbackBehaviorForm form =
+    Encode.object
+        (( "feedback_id", Encode.string form.feedbackId )
+            :: ( "value_description", Encode.string form.valueDescription )
+            :: ( "behavior_description", Encode.string form.behaviorDescription )
+            :: ( "score", Encode.int form.score )
+            :: List.filterMap optionalPair
+                [ ( "behavior_obs", form.behaviorObs )
+                , ( "value_instruction", form.valueInstruction )
+                ]
+        )
+
+
+{-| `POST /feedback-behaviors` — creates a scored behavior under a feedback.
+-}
+createFeedbackBehavior : String -> FeedbackBehaviorForm -> (Result Http.Error FeedbackBehavior -> msg) -> Cmd msg
+createFeedbackBehavior token form toMsg =
+    authRequest token
+        "POST"
+        "/feedback-behaviors"
+        (Http.jsonBody (encodeFeedbackBehaviorForm form))
+        (Http.expectJson toMsg feedbackBehaviorDecoder)
+
+
+{-| `PATCH /feedback-behaviors/{id}` — updates a scored behavior.
+-}
+updateFeedbackBehavior : String -> String -> FeedbackBehaviorForm -> (Result Http.Error FeedbackBehavior -> msg) -> Cmd msg
+updateFeedbackBehavior token id form toMsg =
+    authRequest token
+        "PATCH"
+        ("/feedback-behaviors/" ++ id)
+        (Http.jsonBody (encodeFeedbackBehaviorForm form))
+        (Http.expectJson toMsg feedbackBehaviorDecoder)
+
+
+{-| `DELETE /feedback-behaviors/{id}` — deactivates a scored behavior (soft delete;
+backend replies `204`).
+-}
+deleteFeedbackBehavior : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
+deleteFeedbackBehavior token id toMsg =
+    authRequest token "DELETE" ("/feedback-behaviors/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)

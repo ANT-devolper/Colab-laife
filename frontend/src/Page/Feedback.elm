@@ -40,6 +40,9 @@ type alias Model =
     , items : Load (List Api.ExpectationItem)
     , newGoal : String
     , newBehavior : String
+    , behaviors : Load (List Api.FeedbackBehavior)
+    , behaviorForm : Api.FeedbackBehaviorForm
+    , editingBehavior : Maybe String
     }
 
 
@@ -63,6 +66,14 @@ type Msg
     | RemoveItem String
     | ItemSaved (Result Http.Error Api.ExpectationItem)
     | ItemDeactivated (Result Http.Error ())
+    | GotBehaviors (Result Http.Error (List Api.FeedbackBehavior))
+    | BehaviorFieldChanged BField String
+    | BehaviorSubmitted
+    | BehaviorSaved (Result Http.Error Api.FeedbackBehavior)
+    | BehaviorEditClicked Api.FeedbackBehavior
+    | BehaviorEditCancelled
+    | BehaviorRemoveClicked String
+    | BehaviorRemoved (Result Http.Error ())
 
 
 type Field
@@ -71,6 +82,16 @@ type Field
     | Status
     | Observation
     | ObservationPrivate
+
+
+{-| The scored-behavior form's fields.
+-}
+type BField
+    = BValue
+    | BBehavior
+    | BObs
+    | BInstruction
+    | BScore
 
 
 {-| The two kinds of expectation-contract item.
@@ -105,6 +126,9 @@ init token =
       , items = Loaded []
       , newGoal = ""
       , newBehavior = ""
+      , behaviors = Loaded []
+      , behaviorForm = Api.emptyFeedbackBehaviorForm ""
+      , editingBehavior = Nothing
       }
     , Api.getCollaborators token GotCollaborators
     )
@@ -185,7 +209,12 @@ update msg model =
             ( { model | error = Nothing }, Api.deleteFeedback model.token id Deactivated )
 
         Deactivated (Ok ()) ->
-            ( { model | openFeedback = Nothing, items = Loaded [] }
+            ( { model
+                | openFeedback = Nothing
+                , items = Loaded []
+                , behaviors = Loaded []
+                , editingBehavior = Nothing
+              }
             , Api.getFeedbacks model.token (Just model.selected) GotFeedbacks
             )
 
@@ -193,12 +222,30 @@ update msg model =
             ( { model | error = Just "Could not deactivate the feedback." }, Cmd.none )
 
         OpenClicked id ->
-            ( { model | openFeedback = Just id, items = Loading, newGoal = "", newBehavior = "" }
-            , Api.getExpectationItems model.token id GotItems
+            ( { model
+                | openFeedback = Just id
+                , items = Loading
+                , newGoal = ""
+                , newBehavior = ""
+                , behaviors = Loading
+                , behaviorForm = Api.emptyFeedbackBehaviorForm id
+                , editingBehavior = Nothing
+              }
+            , Cmd.batch
+                [ Api.getExpectationItems model.token id GotItems
+                , Api.getFeedbackBehaviors model.token id GotBehaviors
+                ]
             )
 
         CloseClicked ->
-            ( { model | openFeedback = Nothing, items = Loaded [] }, Cmd.none )
+            ( { model
+                | openFeedback = Nothing
+                , items = Loaded []
+                , behaviors = Loaded []
+                , editingBehavior = Nothing
+              }
+            , Cmd.none
+            )
 
         GotItems result ->
             ( { model | items = fromResult result }, Cmd.none )
@@ -250,6 +297,60 @@ update msg model =
         ItemDeactivated _ ->
             ( model, reloadItems model )
 
+        GotBehaviors result ->
+            ( { model | behaviors = fromResult result }, Cmd.none )
+
+        BehaviorFieldChanged field value ->
+            ( { model | behaviorForm = setBField field value model.behaviorForm }, Cmd.none )
+
+        BehaviorSubmitted ->
+            if behaviorIncomplete model.behaviorForm then
+                ( model, Cmd.none )
+
+            else
+                ( { model | error = Nothing }
+                , case model.editingBehavior of
+                    Just id ->
+                        Api.updateFeedbackBehavior model.token id model.behaviorForm BehaviorSaved
+
+                    Nothing ->
+                        Api.createFeedbackBehavior model.token model.behaviorForm BehaviorSaved
+                )
+
+        BehaviorSaved (Ok _) ->
+            ( { model
+                | behaviorForm = Api.emptyFeedbackBehaviorForm (openFeedbackId model)
+                , editingBehavior = Nothing
+              }
+            , reloadBehaviors model
+            )
+
+        BehaviorSaved (Err _) ->
+            ( { model | error = Just "Could not save the behavior." }, Cmd.none )
+
+        BehaviorEditClicked behavior ->
+            ( { model
+                | editingBehavior = Just behavior.id
+                , behaviorForm = Api.feedbackBehaviorFormFromBehavior behavior
+                , error = Nothing
+              }
+            , Cmd.none
+            )
+
+        BehaviorEditCancelled ->
+            ( { model
+                | editingBehavior = Nothing
+                , behaviorForm = Api.emptyFeedbackBehaviorForm (openFeedbackId model)
+              }
+            , Cmd.none
+            )
+
+        BehaviorRemoveClicked id ->
+            ( model, Api.deleteFeedbackBehavior model.token id BehaviorRemoved )
+
+        BehaviorRemoved _ ->
+            ( { model | editingBehavior = Nothing }, reloadBehaviors model )
+
 
 setField : Field -> String -> Api.FeedbackForm -> Api.FeedbackForm
 setField field fieldValue form =
@@ -298,6 +399,46 @@ reloadItems model =
 
         Nothing ->
             Cmd.none
+
+
+reloadBehaviors : Model -> Cmd Msg
+reloadBehaviors model =
+    case model.openFeedback of
+        Just id ->
+            Api.getFeedbackBehaviors model.token id GotBehaviors
+
+        Nothing ->
+            Cmd.none
+
+
+openFeedbackId : Model -> String
+openFeedbackId model =
+    Maybe.withDefault "" model.openFeedback
+
+
+setBField : BField -> String -> Api.FeedbackBehaviorForm -> Api.FeedbackBehaviorForm
+setBField field value form =
+    case field of
+        BValue ->
+            { form | valueDescription = value }
+
+        BBehavior ->
+            { form | behaviorDescription = value }
+
+        BObs ->
+            { form | behaviorObs = value }
+
+        BInstruction ->
+            { form | valueInstruction = value }
+
+        BScore ->
+            { form | score = Maybe.withDefault 0 (String.toInt value) }
+
+
+behaviorIncomplete : Api.FeedbackBehaviorForm -> Bool
+behaviorIncomplete form =
+    String.isEmpty (String.trim form.valueDescription)
+        || String.isEmpty (String.trim form.behaviorDescription)
 
 
 fromResult : Result Http.Error a -> Load a
@@ -483,19 +624,126 @@ viewContract model =
         Just _ ->
             section [ class "contract" ]
                 [ h2 [] [ text "Expectation contract" ]
-                , case model.items of
-                    Loading ->
-                        p [ class "status" ] [ text "Loading…" ]
-
-                    Failed ->
-                        p [ class "status error" ] [ text "Could not load the contract." ]
-
-                    Loaded loadedItems ->
-                        div []
-                            [ viewChecklist "Goals" Goal "New goal" "Add goal" model.newGoal loadedItems
-                            , viewChecklist "Behaviors" Behavior "New behavior" "Add behavior" model.newBehavior loadedItems
-                            ]
+                , viewItems model
+                , viewBehaviors model
                 ]
+
+
+viewItems : Model -> Html Msg
+viewItems model =
+    case model.items of
+        Loading ->
+            p [ class "status" ] [ text "Loading…" ]
+
+        Failed ->
+            p [ class "status error" ] [ text "Could not load the contract." ]
+
+        Loaded loadedItems ->
+            div []
+                [ viewChecklist "Goals" Goal "New goal" "Add goal" model.newGoal loadedItems
+                , viewChecklist "Behaviors" Behavior "New behavior" "Add behavior" model.newBehavior loadedItems
+                ]
+
+
+viewBehaviors : Model -> Html Msg
+viewBehaviors model =
+    section [ class "scored-behaviors" ]
+        [ h2 [] [ text "Scored behaviors" ]
+        , viewBehaviorForm model
+        , case model.behaviors of
+            Loading ->
+                p [ class "status" ] [ text "Loading…" ]
+
+            Failed ->
+                p [ class "status error" ] [ text "Could not load the behaviors." ]
+
+            Loaded [] ->
+                p [ class "status empty" ] [ em [] [ text "No scored behaviors yet." ] ]
+
+            Loaded behaviors ->
+                table []
+                    [ thead []
+                        [ tr []
+                            [ th [] [ text "Value" ]
+                            , th [] [ text "Behavior" ]
+                            , th [] [ text "Score" ]
+                            , th [] [ text "Actions" ]
+                            ]
+                        ]
+                    , tbody [] (List.map viewBehaviorRow behaviors)
+                    ]
+        ]
+
+
+viewBehaviorForm : Model -> Html Msg
+viewBehaviorForm model =
+    let
+        editing =
+            model.editingBehavior /= Nothing
+
+        submitLabel =
+            if editing then
+                "Save scored behavior"
+
+            else
+                "Add scored behavior"
+    in
+    form [ class "create-form", onSubmit BehaviorSubmitted ]
+        [ bTextField "Value description" BValue model.behaviorForm.valueDescription
+        , bTextField "Behavior description" BBehavior model.behaviorForm.behaviorDescription
+        , bLongField "Behavior observation" BObs model.behaviorForm.behaviorObs
+        , bLongField "Value instruction" BInstruction model.behaviorForm.valueInstruction
+        , label []
+            [ span [] [ text "Behavior score" ]
+            , input
+                [ type_ "number"
+                , attribute "aria-label" "Behavior score"
+                , value (String.fromInt model.behaviorForm.score)
+                , onInput (BehaviorFieldChanged BScore)
+                ]
+                []
+            ]
+        , button [ type_ "submit", disabled (behaviorIncomplete model.behaviorForm) ]
+            [ text submitLabel ]
+        , if editing then
+            button [ type_ "button", onClick BehaviorEditCancelled ] [ text "Cancel" ]
+
+          else
+            text ""
+        ]
+
+
+bTextField : String -> BField -> String -> Html Msg
+bTextField labelText field fieldValue =
+    label []
+        [ span [] [ text labelText ]
+        , input
+            [ attribute "aria-label" labelText, value fieldValue, onInput (BehaviorFieldChanged field) ]
+            []
+        ]
+
+
+bLongField : String -> BField -> String -> Html Msg
+bLongField labelText field fieldValue =
+    label []
+        [ span [] [ text labelText ]
+        , textarea
+            [ attribute "aria-label" labelText, value fieldValue, onInput (BehaviorFieldChanged field) ]
+            []
+        ]
+
+
+viewBehaviorRow : Api.FeedbackBehavior -> Html Msg
+viewBehaviorRow behavior =
+    tr []
+        [ td [] [ text behavior.valueDescription ]
+        , td [] [ text behavior.behaviorDescription ]
+        , td [] [ text (String.fromInt behavior.score) ]
+        , td []
+            [ button [ type_ "button", onClick (BehaviorEditClicked behavior) ] [ text "Edit" ]
+            , button [ type_ "button", onClick (BehaviorRemoveClicked behavior.id) ] [ text "Remove" ]
+            ]
+        ]
 
 
 viewChecklist : String -> ItemKind -> String -> String -> String -> List Api.ExpectationItem -> Html Msg

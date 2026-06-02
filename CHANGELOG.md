@@ -291,5 +291,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `updateExpectationItem`/`deleteExpectationItem` and the pure `encodeExpectationItemForm`.
   Unit-tested with `elm-test` (decoder + encoder) and exercised end-to-end in
   `e2e/tests/feedback-write.spec.ts` (open feedback → add a goal → mark it done → remove it). The
-  backend is unchanged (the `/expectation-items` routes already existed). The scored behaviors and
-  the annotations UI are next.
+  backend is unchanged (the `/expectation-items` routes already existed).
+- Scored-behaviors UI nested in an open feedback (Phase 3A): the contract section gains a
+  "Scored behaviors" table with a create/edit form (value/behavior descriptions, optional
+  observation/instruction, integer score) and remove. `Api.elm` gains
+  `FeedbackBehavior`/`feedbackBehaviorDecoder`, `getFeedbackBehaviors` (the `?feedback_id=`
+  filter), `createFeedbackBehavior`/`updateFeedbackBehavior`/`deleteFeedbackBehavior` and the
+  pure `encodeFeedbackBehaviorForm` (always sends the required fields and the integer score).
+  Unit-tested with `elm-test` (decoder + encoder) and exercised end-to-end in
+  `e2e/tests/feedback-write.spec.ts` (add a scored behavior → edit its score → remove it). The
+  backend is unchanged (the `/feedback-behaviors` routes already existed). The annotations UI is
+  next.

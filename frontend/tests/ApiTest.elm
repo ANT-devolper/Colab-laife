@@ -224,4 +224,44 @@ suite =
                     { feedbackId = "f1", kind = "behavior", description = "", done = True }
                     |> Encode.encode 0
                     |> Expect.equal "{\"feedback_id\":\"f1\",\"kind\":\"behavior\",\"done\":true}"
+        , test "feedbackBehaviorDecoder reads the scored-behavior fields" <|
+            \_ ->
+                "{\"id\":\"b1\",\"feedback_id\":\"f1\",\"value_description\":\"Leadership\",\"behavior_description\":\"Delegates clearly\",\"behavior_obs\":null,\"value_instruction\":null,\"score\":4,\"active\":true}"
+                    |> Decode.decodeString Api.feedbackBehaviorDecoder
+                    |> Expect.equal
+                        (Ok
+                            { id = "b1"
+                            , feedbackId = "f1"
+                            , valueDescription = "Leadership"
+                            , behaviorDescription = "Delegates clearly"
+                            , behaviorObs = Nothing
+                            , valueInstruction = Nothing
+                            , score = 4
+                            , active = True
+                            }
+                        )
+        , test "encodeFeedbackBehaviorForm always sends the required fields and the integer score" <|
+            \_ ->
+                Api.encodeFeedbackBehaviorForm
+                    { feedbackId = "f1"
+                    , valueDescription = "Leadership"
+                    , behaviorDescription = "Delegates clearly"
+                    , behaviorObs = ""
+                    , valueInstruction = ""
+                    , score = 4
+                    }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"feedback_id\":\"f1\",\"value_description\":\"Leadership\",\"behavior_description\":\"Delegates clearly\",\"score\":4}"
+        , test "encodeFeedbackBehaviorForm includes the optional observation and instruction" <|
+            \_ ->
+                Api.encodeFeedbackBehaviorForm
+                    { feedbackId = "f1"
+                    , valueDescription = "Leadership"
+                    , behaviorDescription = "Delegates clearly"
+                    , behaviorObs = "Observed in standups"
+                    , valueInstruction = "Coach on delegation"
+                    , score = 3
+                    }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"feedback_id\":\"f1\",\"value_description\":\"Leadership\",\"behavior_description\":\"Delegates clearly\",\"score\":3,\"behavior_obs\":\"Observed in standups\",\"value_instruction\":\"Coach on delegation\"}"
         ]
