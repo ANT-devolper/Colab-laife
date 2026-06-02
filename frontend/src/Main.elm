@@ -9,6 +9,7 @@ import Browser
 import Html exposing (Html, button, div, h1, nav, text)
 import Html.Attributes exposing (class, classList, type_)
 import Html.Events exposing (onClick)
+import Page.Annotations as Annotations
 import Page.Collaborators as Collaborators
 import Page.Feedback as Feedback
 import Page.Login as Login
@@ -30,6 +31,7 @@ type Page
 type Tab
     = CadastroTab
     | FeedbackTab
+    | AnnotationsTab
 
 
 {-| The authenticated shell's tabs and sub-pages.
@@ -40,6 +42,7 @@ type alias Authed =
     , roles : Roles.Model
     , collaborators : Collaborators.Model
     , feedback : Feedback.Model
+    , annotations : Annotations.Model
     }
 
 
@@ -50,6 +53,7 @@ type Msg
     | RolesMsg Roles.Msg
     | CollaboratorsMsg Collaborators.Msg
     | FeedbackMsg Feedback.Msg
+    | AnnotationsMsg Annotations.Msg
 
 
 init : () -> ( Model, Cmd Msg )
@@ -79,6 +83,9 @@ update msg model =
 
                         ( feedback, feedbackCmd ) =
                             Feedback.init token
+
+                        ( annotations, annotationsCmd ) =
+                            Annotations.init token
                     in
                     ( { model
                         | page =
@@ -88,6 +95,7 @@ update msg model =
                                 , roles = roles
                                 , collaborators = collaborators
                                 , feedback = feedback
+                                , annotations = annotations
                                 }
                       }
                     , Cmd.batch
@@ -95,6 +103,7 @@ update msg model =
                         , Cmd.map RolesMsg rolesCmd
                         , Cmd.map CollaboratorsMsg collaboratorsCmd
                         , Cmd.map FeedbackMsg feedbackCmd
+                        , Cmd.map AnnotationsMsg annotationsCmd
                         ]
                     )
 
@@ -142,6 +151,15 @@ update msg model =
             , Cmd.map FeedbackMsg cmd
             )
 
+        ( AnnotationsMsg subMsg, AuthedView authed ) ->
+            let
+                ( annotations, cmd ) =
+                    Annotations.update subMsg authed.annotations
+            in
+            ( { model | page = AuthedView { authed | annotations = annotations } }
+            , Cmd.map AnnotationsMsg cmd
+            )
+
         -- Messages that do not match the current page are ignored.
         _ ->
             ( model, Cmd.none )
@@ -173,6 +191,7 @@ viewTabs active =
     nav [ class "tabs" ]
         [ tabButton CadastroTab "Cadastro" active
         , tabButton FeedbackTab "Feedback" active
+        , tabButton AnnotationsTab "Annotations" active
         ]
 
 
@@ -196,6 +215,10 @@ viewTab authed =
         FeedbackTab ->
             div [ class "directory" ]
                 [ Html.map FeedbackMsg (Feedback.view authed.feedback) ]
+
+        AnnotationsTab ->
+            div [ class "directory" ]
+                [ Html.map AnnotationsMsg (Annotations.view authed.annotations) ]
 
 
 main : Program () Model Msg

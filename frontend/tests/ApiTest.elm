@@ -264,4 +264,62 @@ suite =
                     }
                     |> Encode.encode 0
                     |> Expect.equal "{\"feedback_id\":\"f1\",\"value_description\":\"Leadership\",\"behavior_description\":\"Delegates clearly\",\"score\":3,\"behavior_obs\":\"Observed in standups\",\"value_instruction\":\"Coach on delegation\"}"
+        , test "annotationDecoder reads the annotation fields" <|
+            \_ ->
+                "{\"id\":\"a1\",\"collaborator_id\":\"c1\",\"note_date\":\"2026-06-02T00:00:00+00:00\",\"score1_number\":2,\"score1_description\":null,\"score1_type\":\"positive\",\"ask_amount_days\":false,\"score2_number\":null,\"score2_description\":null,\"score2_type\":null,\"amount_days\":null,\"main_note\":null,\"period_start_date\":null,\"observation\":null,\"recorded_on_mobile\":false,\"active\":true}"
+                    |> Decode.decodeString Api.annotationDecoder
+                    |> Expect.equal
+                        (Ok
+                            { id = "a1"
+                            , collaboratorId = "c1"
+                            , noteDate = "2026-06-02T00:00:00+00:00"
+                            , score1Number = 2
+                            , score1Type = "positive"
+                            , score1Description = Nothing
+                            , askAmountDays = False
+                            , score2Number = Nothing
+                            , score2Type = Nothing
+                            , score2Description = Nothing
+                            , amountDays = Nothing
+                            , mainNote = Nothing
+                            , observation = Nothing
+                            , active = True
+                            }
+                        )
+        , test "encodeAnnotationForm sends the required fields and omits unset optionals" <|
+            \_ ->
+                Api.encodeAnnotationForm
+                    { collaboratorId = "c1"
+                    , noteDate = "2026-06-02"
+                    , score1Number = 2
+                    , score1Type = "positive"
+                    , score1Description = ""
+                    , askAmountDays = False
+                    , amountDays = "7"
+                    , score2Number = ""
+                    , score2Type = ""
+                    , score2Description = ""
+                    , mainNote = ""
+                    , observation = ""
+                    }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"collaborator_id\":\"c1\",\"note_date\":\"2026-06-02T00:00:00Z\",\"score1_number\":2,\"score1_type\":\"positive\",\"ask_amount_days\":false}"
+        , test "encodeAnnotationForm includes a second score, the conditional amount_days and notes" <|
+            \_ ->
+                Api.encodeAnnotationForm
+                    { collaboratorId = "c1"
+                    , noteDate = "2026-06-02"
+                    , score1Number = 2
+                    , score1Type = "positive"
+                    , score1Description = ""
+                    , askAmountDays = True
+                    , amountDays = "7"
+                    , score2Number = "1"
+                    , score2Type = "attention"
+                    , score2Description = ""
+                    , mainNote = "Talk again"
+                    , observation = "Keep an eye"
+                    }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"collaborator_id\":\"c1\",\"note_date\":\"2026-06-02T00:00:00Z\",\"score1_number\":2,\"score1_type\":\"positive\",\"ask_amount_days\":true,\"score2_number\":1,\"amount_days\":7,\"score2_type\":\"attention\",\"main_note\":\"Talk again\",\"observation\":\"Keep an eye\"}"
         ]

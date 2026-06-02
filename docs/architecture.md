@@ -242,8 +242,8 @@ over HTTP/JSON. Current scope:
   checkbox; a failed save (e.g. the backend's `422` for a dangling reference) surfaces as a form
   error. Write calls (`createCollaborator`/`updateCollaborator`/`deleteCollaborator`) and the
   form encoder live in `Api.elm`. This closes the cadastro write CRUD in the SPA. ✅
-- **Tabs:** the authenticated shell is split into a "Cadastro" tab (the three sections above) and
-  a "Feedback" tab. ✅
+- **Tabs:** the authenticated shell is split into "Cadastro" (the three sections above),
+  "Feedback" and "Annotations" tabs. ✅
 - **Feedback** (`Page/Feedback.elm`): feedback is per collaborator, so the tab starts with a
   collaborator dropdown; picking one lists that collaborator's feedbacks and binds a single
   create/edit form (date, next date, status, public/private observations), plus deactivate.
@@ -253,7 +253,13 @@ over HTTP/JSON. Current scope:
   added, toggled (`done`) and removed (`createExpectationItem`/`updateExpectationItem`/
   `deleteExpectationItem`), plus a **scored behaviors** table (value/behavior/observation/
   instruction + integer score) with create/edit/remove (`createFeedbackBehavior`/
-  `updateFeedbackBehavior`/`deleteFeedbackBehavior`). The annotations UI is 🚧 next.
+  `updateFeedbackBehavior`/`deleteFeedbackBehavior`). ✅
+- **Annotations** (`Page/Annotations.elm`, its own tab): like feedback, starts with a collaborator
+  dropdown, then a single create/edit form for a quick scored note — note date, a required first
+  score (number + type + description), an optional second score, a conditional amount-of-days
+  input (shown only when "ask amount of days" is checked), main note and observation — plus
+  deactivate. Write calls (`createAnnotation`/`updateAnnotation`/`deleteAnnotation`) and the form
+  encoder live in `Api.elm`. This completes the Phase 3A (notes & feedback) UI. ✅
 
 **Single-origin delivery** ([ADR 0011](adr/0011-serve-spa-from-axum.md)): the Axum binary
 serves the built SPA itself, so the browser only ever talks to one origin (no CORS). ✅
@@ -292,7 +298,8 @@ Levels:
   (`e2e/scripts/e2e-stack.mjs`) boots PostgreSQL, migrates, builds the SPA and runs the API
   serving it; the specs provision a tenant via the API, sign in through the SPA, and assert the
   login/empty-directory path, the sector, role and collaborator write flows
-  (create → edit → deactivate), and the per-collaborator feedback write flow. The
+  (create → edit → deactivate), the per-collaborator feedback flow (with its expectation contract
+  and scored behaviors) and the per-collaborator annotation flow. The
   chromium project is the gate (`npm test`); Firefox/WebKit are available via `npm run test:all`
   once their system libraries are installed.
 

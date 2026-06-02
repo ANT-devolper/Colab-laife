@@ -300,5 +300,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pure `encodeFeedbackBehaviorForm` (always sends the required fields and the integer score).
   Unit-tested with `elm-test` (decoder + encoder) and exercised end-to-end in
   `e2e/tests/feedback-write.spec.ts` (add a scored behavior → edit its score → remove it). The
-  backend is unchanged (the `/feedback-behaviors` routes already existed). The annotations UI is
-  next.
+  backend is unchanged (the `/feedback-behaviors` routes already existed).
+- Annotations UI in the Elm SPA (Phase 3A, completing the notes & feedback slice): a new
+  "Annotations" tab picks a collaborator and manages their quick scored notes with a single
+  create/edit form — note date, a required first score (number/type/description), an optional
+  second score, a conditional amount-of-days input (shown only when "ask amount of days" is
+  checked), main note and observation — plus deactivate. `Api.elm` gains `Annotation`/
+  `annotationDecoder`, `getAnnotations` (the `?collaborator_id=` filter),
+  `createAnnotation`/`updateAnnotation`/`deleteAnnotation` and the pure `encodeAnnotationForm`
+  (always sends the required fields, omits unset optionals, and only sends `amount_days` when
+  asked). Unit-tested with `elm-test` (decoder + encoder) and end-to-end with Playwright
+  (`e2e/tests/annotations-write.spec.ts`: pick collaborator → create → toggle the conditional
+  field → edit the score type → deactivate). The backend is unchanged (the `/annotations` routes
+  already existed). This completes the Phase 3A UI.

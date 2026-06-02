@@ -1,11 +1,11 @@
 # Notes & feedback
 
 > **Status:** ✅ backend implemented — the `feedback` event, its expectation-contract items, its
-> scored behaviors and standalone `annotation` notes all have RBAC-guarded CRUD. The Elm UI is
-> 🚧 in progress: the **feedback parent** (list/create/edit/deactivate per collaborator) is done;
-> the **expectation-contract items** (goals/behaviors checklist) and the **scored behaviors** of
-> an open feedback are done too; the annotations UI is next. The deferred concerns below
-> (AI/transcription, attachments, messaging) remain planned.
+> scored behaviors and standalone `annotation` notes all have RBAC-guarded CRUD. The Elm UI is ✅
+> complete for this slice: the **feedback parent** (per collaborator), the **expectation-contract
+> items** (goals/behaviors checklist) and the **scored behaviors** of an open feedback, plus the
+> per-collaborator **annotations** (two scores, conditional amount-of-days, notes). The deferred
+> concerns below (AI/transcription, attachments, messaging) remain planned.
 
 ## Purpose
 
@@ -45,7 +45,8 @@ collaborators, instead of relying only on annual reviews.
 - Create / edit / remove a feedback for a collaborator (subject to permissions). ✅ (backend +
   Elm UI: the Feedback tab picks a collaborator and manages their feedbacks.)
 - List the feedback for a collaborator over time (newest first). ✅
-- Author quick notes about a collaborator (and list/edit/remove them). ✅ (backend; Elm UI 🚧.)
+- Author quick notes about a collaborator (and list/edit/remove them). ✅ (backend + Elm UI: the
+  Annotations tab picks a collaborator and manages their annotations.)
 
 ## Permissions / roles
 

@@ -20,6 +20,9 @@ module Api exposing
     , FeedbackBehavior, feedbackBehaviorDecoder, getFeedbackBehaviors
     , FeedbackBehaviorForm, emptyFeedbackBehaviorForm, feedbackBehaviorFormFromBehavior, encodeFeedbackBehaviorForm
     , createFeedbackBehavior, updateFeedbackBehavior, deleteFeedbackBehavior
+    , Annotation, annotationDecoder, getAnnotations
+    , AnnotationForm, emptyAnnotationForm, annotationFormFromAnnotation, encodeAnnotationForm
+    , createAnnotation, updateAnnotation, deleteAnnotation
     )
 
 {-| HTTP boundary to the ColabLife backend.
@@ -48,6 +51,9 @@ here is a root-relative path — no base URL or CORS to deal with.
 @docs FeedbackBehavior, feedbackBehaviorDecoder, getFeedbackBehaviors
 @docs FeedbackBehaviorForm, emptyFeedbackBehaviorForm, feedbackBehaviorFormFromBehavior, encodeFeedbackBehaviorForm
 @docs createFeedbackBehavior, updateFeedbackBehavior, deleteFeedbackBehavior
+@docs Annotation, annotationDecoder, getAnnotations
+@docs AnnotationForm, emptyAnnotationForm, annotationFormFromAnnotation, encodeAnnotationForm
+@docs createAnnotation, updateAnnotation, deleteAnnotation
 
 -}
 
@@ -896,3 +902,214 @@ backend replies `204`).
 deleteFeedbackBehavior : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
 deleteFeedbackBehavior token id toMsg =
     authRequest token "DELETE" ("/feedback-behaviors/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)
+
+
+
+-- ANNOTATIONS (quick scored notes)
+
+
+{-| A quick scored note about a collaborator. The `note_date` is the raw RFC3339
+string (the UI shows the date part). The second score, amount-of-days, notes and
+observation are optional. `period_start_date` and `recorded_on_mobile` are not
+surfaced in the UI.
+-}
+type alias Annotation =
+    { id : String
+    , collaboratorId : String
+    , noteDate : String
+    , score1Number : Int
+    , score1Type : String
+    , score1Description : Maybe String
+    , askAmountDays : Bool
+    , score2Number : Maybe Int
+    , score2Type : Maybe String
+    , score2Description : Maybe String
+    , amountDays : Maybe Int
+    , mainNote : Maybe String
+    , observation : Maybe String
+    , active : Bool
+    }
+
+
+{-| A nullable/absent integer field, decoded as `Maybe Int`.
+-}
+optionalIntField : String -> Decoder (Maybe Int)
+optionalIntField name =
+    Decode.maybe (Decode.field name Decode.int)
+
+
+{-| Decodes a single annotation (ignoring fields the UI does not use).
+-}
+annotationDecoder : Decoder Annotation
+annotationDecoder =
+    Decode.succeed Annotation
+        |> andMap (Decode.field "id" Decode.string)
+        |> andMap (Decode.field "collaborator_id" Decode.string)
+        |> andMap (Decode.field "note_date" Decode.string)
+        |> andMap (Decode.field "score1_number" Decode.int)
+        |> andMap (Decode.field "score1_type" Decode.string)
+        |> andMap (optionalString "score1_description")
+        |> andMap (Decode.field "ask_amount_days" Decode.bool)
+        |> andMap (optionalIntField "score2_number")
+        |> andMap (optionalString "score2_type")
+        |> andMap (optionalString "score2_description")
+        |> andMap (optionalIntField "amount_days")
+        |> andMap (optionalString "main_note")
+        |> andMap (optionalString "observation")
+        |> andMap (Decode.field "active" Decode.bool)
+
+
+{-| `GET /annotations` with the session token; an optional collaborator id narrows
+the list to one collaborator.
+-}
+getAnnotations : String -> Maybe String -> (Result Http.Error (List Annotation) -> msg) -> Cmd msg
+getAnnotations token collaboratorId toMsg =
+    let
+        url =
+            case collaboratorId of
+                Just id ->
+                    "/annotations?collaborator_id=" ++ id
+
+                Nothing ->
+                    "/annotations"
+    in
+    authGet token url (Decode.list annotationDecoder) toMsg
+
+
+{-| The create/update payload for an annotation. The optional integer fields
+(`score2Number`, `amountDays`) are held as strings (empty/non-numeric means omit);
+`score1Number` is always sent.
+-}
+type alias AnnotationForm =
+    { collaboratorId : String
+    , noteDate : String
+    , score1Number : Int
+    , score1Type : String
+    , score1Description : String
+    , askAmountDays : Bool
+    , amountDays : String
+    , score2Number : String
+    , score2Type : String
+    , score2Description : String
+    , mainNote : String
+    , observation : String
+    }
+
+
+{-| A blank annotation form bound to a collaborator.
+-}
+emptyAnnotationForm : String -> AnnotationForm
+emptyAnnotationForm collaboratorId =
+    { collaboratorId = collaboratorId
+    , noteDate = ""
+    , score1Number = 0
+    , score1Type = ""
+    , score1Description = ""
+    , askAmountDays = False
+    , amountDays = ""
+    , score2Number = ""
+    , score2Type = ""
+    , score2Description = ""
+    , mainNote = ""
+    , observation = ""
+    }
+
+
+{-| Pre-fills an annotation form from an existing annotation (for editing).
+-}
+annotationFormFromAnnotation : Annotation -> AnnotationForm
+annotationFormFromAnnotation annotation =
+    { collaboratorId = annotation.collaboratorId
+    , noteDate = String.left 10 annotation.noteDate
+    , score1Number = annotation.score1Number
+    , score1Type = annotation.score1Type
+    , score1Description = Maybe.withDefault "" annotation.score1Description
+    , askAmountDays = annotation.askAmountDays
+    , amountDays = maybeIntToString annotation.amountDays
+    , score2Number = maybeIntToString annotation.score2Number
+    , score2Type = Maybe.withDefault "" annotation.score2Type
+    , score2Description = Maybe.withDefault "" annotation.score2Description
+    , mainNote = Maybe.withDefault "" annotation.mainNote
+    , observation = Maybe.withDefault "" annotation.observation
+    }
+
+
+maybeIntToString : Maybe Int -> String
+maybeIntToString value =
+    Maybe.withDefault "" (Maybe.map String.fromInt value)
+
+
+{-| A `(key, value)` integer field, dropped when the raw string is not a number.
+-}
+intPair : String -> String -> List ( String, Encode.Value )
+intPair key raw =
+    case String.toInt (String.trim raw) of
+        Just number ->
+            [ ( key, Encode.int number ) ]
+
+        Nothing ->
+            []
+
+
+{-| Encodes an annotation form: `collaborator_id`, the RFC3339 `note_date`,
+`score1_number`, `score1_type` and `ask_amount_days` are always present; the second
+score, the conditional `amount_days` (only when `ask_amount_days`) and the text
+fields are included only when set.
+-}
+encodeAnnotationForm : AnnotationForm -> Encode.Value
+encodeAnnotationForm form =
+    let
+        amountDaysFields =
+            if form.askAmountDays then
+                intPair "amount_days" form.amountDays
+
+            else
+                []
+    in
+    Encode.object
+        ([ ( "collaborator_id", Encode.string form.collaboratorId )
+         , ( "note_date", Encode.string (toRfc3339 form.noteDate) )
+         , ( "score1_number", Encode.int form.score1Number )
+         , ( "score1_type", Encode.string form.score1Type )
+         , ( "ask_amount_days", Encode.bool form.askAmountDays )
+         ]
+            ++ intPair "score2_number" form.score2Number
+            ++ amountDaysFields
+            ++ List.filterMap optionalPair
+                [ ( "score1_description", form.score1Description )
+                , ( "score2_type", form.score2Type )
+                , ( "score2_description", form.score2Description )
+                , ( "main_note", form.mainNote )
+                , ( "observation", form.observation )
+                ]
+        )
+
+
+{-| `POST /annotations` — creates an annotation.
+-}
+createAnnotation : String -> AnnotationForm -> (Result Http.Error Annotation -> msg) -> Cmd msg
+createAnnotation token form toMsg =
+    authRequest token
+        "POST"
+        "/annotations"
+        (Http.jsonBody (encodeAnnotationForm form))
+        (Http.expectJson toMsg annotationDecoder)
+
+
+{-| `PATCH /annotations/{id}` — updates an annotation.
+-}
+updateAnnotation : String -> String -> AnnotationForm -> (Result Http.Error Annotation -> msg) -> Cmd msg
+updateAnnotation token id form toMsg =
+    authRequest token
+        "PATCH"
+        ("/annotations/" ++ id)
+        (Http.jsonBody (encodeAnnotationForm form))
+        (Http.expectJson toMsg annotationDecoder)
+
+
+{-| `DELETE /annotations/{id}` — deactivates an annotation (soft delete; backend
+replies `204`).
+-}
+deleteAnnotation : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
+deleteAnnotation token id toMsg =
+    authRequest token "DELETE" ("/annotations/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)
