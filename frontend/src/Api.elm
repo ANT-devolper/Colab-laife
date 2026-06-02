@@ -2,6 +2,9 @@ module Api exposing
     ( Credentials, LoginResponse
     , encodeCredentials, loginResponseDecoder
     , authHeader, login
+    , Sector, Role, Collaborator
+    , sectorDecoder, roleDecoder, collaboratorDecoder
+    , getSectors, getRoles, getCollaborators
     )
 
 {-| HTTP boundary to the ColabLife backend.
@@ -12,6 +15,9 @@ here is a root-relative path — no base URL or CORS to deal with.
 @docs Credentials, LoginResponse
 @docs encodeCredentials, loginResponseDecoder
 @docs authHeader, login
+@docs Sector, Role, Collaborator
+@docs sectorDecoder, roleDecoder, collaboratorDecoder
+@docs getSectors, getRoles, getCollaborators
 
 -}
 
@@ -70,4 +76,105 @@ login credentials toMsg =
         { url = "/auth/login"
         , body = Http.jsonBody (encodeCredentials credentials)
         , expect = Http.expectJson toMsg loginResponseDecoder
+        }
+
+
+
+-- CADASTRO (read-only)
+
+
+{-| An organizational unit.
+-}
+type alias Sector =
+    { id : String
+    , name : String
+    , active : Bool
+    }
+
+
+{-| A job title. Only the fields the read-only list needs are decoded; the
+backend carries more.
+-}
+type alias Role =
+    { id : String
+    , name : String
+    , active : Bool
+    }
+
+
+{-| A person managed inside the tenant. `email` is optional in the backend, so it
+is decoded as a `Maybe`.
+-}
+type alias Collaborator =
+    { id : String
+    , name : String
+    , email : Maybe String
+    , isManager : Bool
+    }
+
+
+{-| Decodes a single sector.
+-}
+sectorDecoder : Decoder Sector
+sectorDecoder =
+    Decode.map3 Sector
+        (Decode.field "id" Decode.string)
+        (Decode.field "name" Decode.string)
+        (Decode.field "active" Decode.bool)
+
+
+{-| Decodes a single role (ignoring the description fields the list does not show).
+-}
+roleDecoder : Decoder Role
+roleDecoder =
+    Decode.map3 Role
+        (Decode.field "id" Decode.string)
+        (Decode.field "name" Decode.string)
+        (Decode.field "active" Decode.bool)
+
+
+{-| Decodes a single collaborator.
+-}
+collaboratorDecoder : Decoder Collaborator
+collaboratorDecoder =
+    Decode.map4 Collaborator
+        (Decode.field "id" Decode.string)
+        (Decode.field "name" Decode.string)
+        (Decode.field "email" (Decode.nullable Decode.string))
+        (Decode.field "is_manager" Decode.bool)
+
+
+{-| `GET /sectors` with the session token.
+-}
+getSectors : String -> (Result Http.Error (List Sector) -> msg) -> Cmd msg
+getSectors token toMsg =
+    authGet token "/sectors" (Decode.list sectorDecoder) toMsg
+
+
+{-| `GET /roles` with the session token.
+-}
+getRoles : String -> (Result Http.Error (List Role) -> msg) -> Cmd msg
+getRoles token toMsg =
+    authGet token "/roles" (Decode.list roleDecoder) toMsg
+
+
+{-| `GET /collaborators` with the session token.
+-}
+getCollaborators : String -> (Result Http.Error (List Collaborator) -> msg) -> Cmd msg
+getCollaborators token toMsg =
+    authGet token "/collaborators" (Decode.list collaboratorDecoder) toMsg
+
+
+{-| A `GET` carrying the `Authorization: Bearer` header.
+-}
+authGet : String -> String -> Decoder a -> (Result Http.Error a -> msg) -> Cmd msg
+authGet token url decoder toMsg =
+    Http.request
+        { method = "GET"
+        , headers = [ authHeader token ]
+        , url = url
+        , body = Http.emptyBody
+        , expect = Http.expectJson toMsg decoder
+        , timeout = Nothing
+        , tracker = Nothing
         }

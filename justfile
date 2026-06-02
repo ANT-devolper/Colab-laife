@@ -38,6 +38,10 @@ frontend-build:
 run: frontend-build
     cd backend && cargo run -p api
 
+# Run the end-to-end tests (Playwright boots the full stack via scripts/e2e-stack.mjs).
+e2e *ARGS:
+    cd e2e && npm test {{ARGS}}
+
 # Run database migrations: `just migrate up`, `just migrate down`, `just migrate status`...
 migrate *ARGS:
     cd backend && cargo run -p migration -- {{ARGS}}

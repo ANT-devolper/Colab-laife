@@ -7,7 +7,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "test": "playwright test"
+    "test": "playwright test --project=chromium",
+    "test:all": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "1.60.0"

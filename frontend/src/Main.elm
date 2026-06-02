@@ -6,8 +6,8 @@ Read-only lists land in the next increment.
 -}
 
 import Browser
-import Html exposing (Html, div, text)
-import Html.Attributes exposing (class)
+import Html exposing (Html)
+import Page.Directory as Directory
 import Page.Login as Login
 
 
@@ -17,15 +17,12 @@ type alias Model =
 
 type Page
     = LoginView Login.Model
-    | Authenticated Session
-
-
-type alias Session =
-    { token : String }
+    | DirectoryView Directory.Model
 
 
 type Msg
     = LoginMsg Login.Msg
+    | DirectoryMsg Directory.Msg
 
 
 init : () -> ( Model, Cmd Msg )
@@ -43,15 +40,33 @@ update msg model =
             in
             case outMsg of
                 Login.LoggedIn token ->
-                    ( { model | page = Authenticated { token = token } }, Cmd.none )
+                    let
+                        ( directoryModel, directoryCmd ) =
+                            Directory.init token
+                    in
+                    ( { model | page = DirectoryView directoryModel }
+                    , Cmd.map DirectoryMsg directoryCmd
+                    )
 
                 Login.NoOp ->
                     ( { model | page = LoginView newLoginModel }
                     , Cmd.map LoginMsg loginCmd
                     )
 
-        -- No login messages are expected once authenticated.
-        ( LoginMsg _, Authenticated _ ) ->
+        ( DirectoryMsg subMsg, DirectoryView directoryModel ) ->
+            let
+                ( newDirectoryModel, directoryCmd ) =
+                    Directory.update subMsg directoryModel
+            in
+            ( { model | page = DirectoryView newDirectoryModel }
+            , Cmd.map DirectoryMsg directoryCmd
+            )
+
+        -- Messages that do not match the current page are ignored.
+        ( LoginMsg _, DirectoryView _ ) ->
+            ( model, Cmd.none )
+
+        ( DirectoryMsg _, LoginView _ ) ->
             ( model, Cmd.none )
 
 
@@ -68,8 +83,8 @@ viewPage page =
         LoginView loginModel ->
             Html.map LoginMsg (Login.view loginModel)
 
-        Authenticated _ ->
-            div [ class "shell" ] [ text "Signed in." ]
+        DirectoryView directoryModel ->
+            Html.map DirectoryMsg (Directory.view directoryModel)
 
 
 main : Program () Model Msg

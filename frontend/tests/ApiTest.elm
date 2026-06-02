@@ -30,4 +30,43 @@ suite =
                     |> Decode.decodeString Api.loginResponseDecoder
                     |> Result.toMaybe
                     |> Expect.equal Nothing
+        , test "sectorDecoder reads id, name and active" <|
+            \_ ->
+                "{\"id\":\"s1\",\"name\":\"Engineering\",\"active\":true}"
+                    |> Decode.decodeString Api.sectorDecoder
+                    |> Expect.equal (Ok { id = "s1", name = "Engineering", active = True })
+        , test "roleDecoder reads id, name and active, ignoring extra fields" <|
+            \_ ->
+                "{\"id\":\"r1\",\"name\":\"Backend Engineer\",\"objective\":\"Build\",\"active\":true}"
+                    |> Decode.decodeString Api.roleDecoder
+                    |> Expect.equal (Ok { id = "r1", name = "Backend Engineer", active = True })
+        , test "collaboratorDecoder reads a present email" <|
+            \_ ->
+                "{\"id\":\"c1\",\"name\":\"Alice\",\"email\":\"alice@acme.test\",\"is_manager\":true}"
+                    |> Decode.decodeString Api.collaboratorDecoder
+                    |> Expect.equal
+                        (Ok
+                            { id = "c1"
+                            , name = "Alice"
+                            , email = Just "alice@acme.test"
+                            , isManager = True
+                            }
+                        )
+        , test "collaboratorDecoder reads a null email as Nothing" <|
+            \_ ->
+                "{\"id\":\"c2\",\"name\":\"Bob\",\"email\":null,\"is_manager\":false}"
+                    |> Decode.decodeString Api.collaboratorDecoder
+                    |> Expect.equal
+                        (Ok
+                            { id = "c2"
+                            , name = "Bob"
+                            , email = Nothing
+                            , isManager = False
+                            }
+                        )
+        , test "a list decoder reads an empty array" <|
+            \_ ->
+                "[]"
+                    |> Decode.decodeString (Decode.list Api.sectorDecoder)
+                    |> Expect.equal (Ok [])
         ]

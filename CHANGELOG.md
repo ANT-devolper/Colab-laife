@@ -173,3 +173,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `FRONTEND_DIST` at it. New workspace dependency `tower-http` (feature `fs`). Integration-tested
   with a `MockDatabase` (no Docker): index at the root, real assets, unknown-path fallback to
   `index.html`, and API precedence.
+- Read-only directory in the Elm SPA (Phase 2): after login, `Page/Directory.elm` fetches
+  `/collaborators`, `/sectors` and `/roles` with the Bearer token and renders a table per list,
+  each with its own loading / empty / error state. `Api.elm` gains the `Sector`/`Role`/
+  `Collaborator` types, their decoders and the authenticated `GET` helpers; `Main.elm` now
+  transitions from login to the directory. Unit-tested with `elm-test` (the new decoders,
+  including a null `email` and an empty list).
+- First Playwright end-to-end test (Phase 2): `e2e/tests/login.spec.ts` drives the real stack —
+  Playwright's `webServer` (`e2e/scripts/e2e-stack.mjs`) brings up a dedicated PostgreSQL
+  (via `docker run`, reset each run), applies the public migrations, builds the SPA and runs the
+  API serving it on a single origin. The test provisions a tenant through the API, signs in
+  through the SPA and asserts the empty directory. The chromium project is the gate
+  (`npm test` / `just e2e`); Firefox/WebKit are available via `npm run test:all` once their
+  system libraries are installed. The `justfile` gains an `e2e` recipe.
