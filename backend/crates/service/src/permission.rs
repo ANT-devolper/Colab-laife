@@ -51,6 +51,9 @@ pub enum Resource {
     AnnotationCreate,
     AnnotationUpdate,
     AnnotationDelete,
+    DiscRead,
+    DiscCreate,
+    DiscDelete,
 }
 
 impl Resource {
@@ -91,6 +94,9 @@ impl Resource {
             Self::AnnotationCreate => "annotation.create",
             Self::AnnotationUpdate => "annotation.update",
             Self::AnnotationDelete => "annotation.delete",
+            Self::DiscRead => "disc.read",
+            Self::DiscCreate => "disc.create",
+            Self::DiscDelete => "disc.delete",
         }
     }
 
@@ -131,6 +137,9 @@ impl Resource {
             Self::AnnotationCreate => "Create annotations",
             Self::AnnotationUpdate => "Update annotations",
             Self::AnnotationDelete => "Remove annotations",
+            Self::DiscRead => "View DISC results",
+            Self::DiscCreate => "Create DISC results",
+            Self::DiscDelete => "Remove DISC results",
         }
     }
 
@@ -171,6 +180,9 @@ impl Resource {
             Self::AnnotationCreate,
             Self::AnnotationUpdate,
             Self::AnnotationDelete,
+            Self::DiscRead,
+            Self::DiscCreate,
+            Self::DiscDelete,
         ]
     }
 }

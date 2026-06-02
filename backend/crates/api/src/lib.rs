@@ -1,4 +1,4 @@
-use axum::routing::{get, patch, post};
+use axum::routing::{delete, get, patch, post};
 use axum::Router;
 use sea_orm::DatabaseConnection;
 use service::tenant::TenantRegistry;
@@ -9,6 +9,7 @@ use tower_http::services::{ServeDir, ServeFile};
 mod annotations;
 mod auth;
 mod collaborators;
+mod disc_results;
 mod expectation_items;
 pub mod extract;
 mod feedback;
@@ -97,6 +98,11 @@ pub fn build_router(
             "/annotations/{id}",
             patch(annotations::update).delete(annotations::delete),
         )
+        .route(
+            "/disc-results",
+            get(disc_results::list).post(disc_results::create),
+        )
+        .route("/disc-results/{id}", delete(disc_results::delete))
         .with_state(state)
 }
 

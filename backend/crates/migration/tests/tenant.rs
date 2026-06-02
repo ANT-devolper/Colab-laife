@@ -141,3 +141,13 @@ async fn tenant_migrations_create_the_annotation_table() {
         "expected tenant table `annotation` to exist"
     );
 }
+
+#[tokio::test]
+async fn tenant_migrations_create_the_collaborator_disc_result_table() {
+    let db = setup().await;
+
+    assert!(
+        table_exists(&db, SCHEMA, "collaborator_disc_result").await,
+        "expected tenant table `collaborator_disc_result` to exist"
+    );
+}

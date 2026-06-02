@@ -313,3 +313,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`e2e/tests/annotations-write.spec.ts`: pick collaborator → create → toggle the conditional
   field → edit the score type → deactivate). The backend is unchanged (the `/annotations` routes
   already existed). This completes the Phase 3A UI.
+- DISC assessment backend (Phase 3B, collaborator results): a `collaborator_disc_result` tenant
+  table (`collaborator_id` FK + the four dimension scores `executor`/`communicator`/`planner`/
+  `analyst`, kept as history with no soft-delete), its SeaORM entity, and RBAC-guarded routes at
+  `/disc-results` (`disc.{read,create,delete}`): `GET` lists newest-first with an optional
+  `?collaborator_id=` filter, `POST` records a result (rejecting an unknown collaborator with
+  `422`), and `DELETE` hard-deletes (results are immutable). The view includes the
+  primary/secondary profile **derived at read time** by the new pure `service::disc::profile`
+  (highest and second-highest dimension; ties break by a fixed order). Tested with a migration
+  table check, `service::disc` unit tests, and HTTP integration tests (record → list with derived
+  profile → delete; unknown collaborator → `422`; permissionless member → `403`). The Elm
+  questionnaire/results UI and the public (no-auth) submission endpoint are next.

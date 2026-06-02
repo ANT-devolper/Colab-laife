@@ -29,10 +29,10 @@ The backend is a Cargo workspace (`backend/`) split into focused crates
 
 | Crate | Responsibility | Status |
 |---|---|---|
-| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles`, `/collaborators`, `/feedbacks`, `/expectation-items`, `/feedback-behaviors` and `/annotations` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators + feedback + expectation-contract + feedback-behavior + annotations CRUD |
-| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator`, `feedback`, `expectation_contract_item`, `feedback_behavior`, `annotation` |
-| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` + `feedback` + `expectation_contract_item` + `feedback_behavior` + `annotation` |
-| `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry |
+| `api` | Axum HTTP app: builds the router, wires shared state, serves the probes, `POST /organizations`, `POST /auth/login`, `GET /auth/me`, the RBAC-guarded `GET /users` and the RBAC-guarded `/sectors`, `/roles`, `/collaborators`, `/feedbacks`, `/expectation-items`, `/feedback-behaviors`, `/annotations` and `/disc-results` CRUD (via the `TenantContext` extractor). Entry point in `main`; routes in `build_router`. | ✅ probes, provisioning + auth endpoints, auth extractor + RBAC guard, sectors + roles + collaborators + feedback + expectation-contract + feedback-behavior + annotations + DISC results CRUD |
+| `entity` | SeaORM entities (the persisted data model). | ✅ `organization`, `user`, `permission::*`, `sector`, `role`, `collaborator`, `feedback`, `expectation_contract_item`, `feedback_behavior`, `annotation`, `collaborator_disc_result` |
+| `migration` | `sea-orm-migration`; defines `PublicMigrator` and `TenantMigrator`. Run via `cargo run -p migration` / `just migrate`. | ✅ public schema, tenant RBAC + `sector` + `role` + `collaborator` + `feedback` + `expectation_contract_item` + `feedback_behavior` + `annotation` + `collaborator_disc_result` |
+| `service` | Domain/business logic, kept independent of HTTP and (where possible) of the ORM. | ✅ password hashing, tenant provisioning, authentication, tenant registry, DISC profile derivation |
 
 The router is created by `build_router(db, database_url, jwt_secret)` in
 `backend/crates/api/src/lib.rs`, which is kept separate from `main` so integration tests can

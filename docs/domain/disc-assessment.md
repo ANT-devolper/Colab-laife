@@ -1,6 +1,8 @@
 # DISC assessment
 
-> **Status:** 🚧 planned — not implemented yet.
+> **Status:** 🚧 in progress — the collaborator result backend is ✅ implemented (table + entity +
+> RBAC-guarded CRUD + profile derivation). The public questionnaire submission, the Elm
+> questionnaire/results UI and the recruitment-candidate variant are next.
 
 ## Purpose
 
@@ -9,9 +11,17 @@ four DISC dimensions: **D**ominance, **I**nfluence, **S**teadiness, **C**onscien
 
 ## Key concepts / entities
 
-- **Questionnaire** — the set of DISC questions/items presented to a respondent.
-- **Response** — an employee's answers to a questionnaire instance.
-- **Profile / result** — the computed DISC scores derived from a response.
+- **Questionnaire** — the set of DISC questions/items presented to a respondent. In our redesign
+  the 40 items are not persisted; they live in the Elm questionnaire (as in the legacy), and only
+  the scores are stored. 🚧 planned.
+- **Response** — an employee's answers to a questionnaire instance (client-side only; not stored).
+- **Profile / result** — ✅ implemented as the `collaborator_disc_result` table in the tenant
+  schema (`collaborator_id` FK + the four dimension scores `executor`/`communicator`/`planner`/
+  `analyst`, timestamps). Results are kept as history (no soft-delete); reads return newest-first.
+  The **primary/secondary profile is derived at read time** by `service::disc::profile` (highest
+  and second-highest dimension; ties break by a fixed order), not stored. RBAC-guarded CRUD at
+  `/disc-results` (`disc.{read,create,delete}`); `create` rejects an unknown collaborator with
+  `422`; results are immutable (no update) and `delete` is a hard delete.
 
 ## Main flows
 
@@ -27,7 +37,11 @@ four DISC dimensions: **D**ominance, **I**nfluence, **S**teadiness, **C**onscien
 
 ## Status
 
-Planned. Scoring rules and the question bank are to be specified.
+Backend for collaborator results implemented (`collaborator_disc_result` in `TenantMigrator`,
+`entity::collaborator_disc_result`, `service::disc`, `api::disc_results`). The scoring (ranking
+1–4 per row → points `4 - position` summed per dimension) lives in the Elm questionnaire and is
+🚧 next, along with the public (no-auth, UUID-in-URL) submission endpoint and the
+recruitment-candidate result variant.
 
 ## Reference
 
