@@ -242,6 +242,14 @@ over HTTP/JSON. Current scope:
   checkbox; a failed save (e.g. the backend's `422` for a dangling reference) surfaces as a form
   error. Write calls (`createCollaborator`/`updateCollaborator`/`deleteCollaborator`) and the
   form encoder live in `Api.elm`. This closes the cadastro write CRUD in the SPA. ✅
+- **Tabs:** the authenticated shell is split into a "Cadastro" tab (the three sections above) and
+  a "Feedback" tab. ✅
+- **Feedback** (`Page/Feedback.elm`): feedback is per collaborator, so the tab starts with a
+  collaborator dropdown; picking one lists that collaborator's feedbacks and binds a single
+  create/edit form (date, next date, status, public/private observations), plus deactivate.
+  Write calls (`createFeedback`/`updateFeedback`/`deleteFeedback`) and the form encoder — which
+  converts the `YYYY-MM-DD` date inputs to RFC3339 — live in `Api.elm`. The nested
+  expectation-contract items / scored behaviors and the annotations UI are 🚧 next.
 
 **Single-origin delivery** ([ADR 0011](adr/0011-serve-spa-from-axum.md)): the Axum binary
 serves the built SPA itself, so the browser only ever talks to one origin (no CORS). ✅
@@ -279,8 +287,8 @@ Levels:
 - **E2E** — Playwright. ✅ Drives the real stack: Playwright's `webServer`
   (`e2e/scripts/e2e-stack.mjs`) boots PostgreSQL, migrates, builds the SPA and runs the API
   serving it; the specs provision a tenant via the API, sign in through the SPA, and assert the
-  login/empty-directory path and the sector, role and collaborator write flows
-  (create → edit → deactivate). The
+  login/empty-directory path, the sector, role and collaborator write flows
+  (create → edit → deactivate), and the per-collaborator feedback write flow. The
   chromium project is the gate (`npm test`); Firefox/WebKit are available via `npm run test:all`
   once their system libraries are installed.
 

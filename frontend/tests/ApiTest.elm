@@ -158,4 +158,44 @@ suite =
                     }
                     |> Encode.encode 0
                     |> Expect.equal "{\"name\":\"Bob\",\"is_manager\":false}"
+        , test "feedbackDecoder reads the feedback fields" <|
+            \_ ->
+                "{\"id\":\"f1\",\"collaborator_id\":\"c1\",\"feedback_date\":\"2026-06-02T00:00:00+00:00\",\"next_feedback_date\":null,\"expectation_contract_observation\":null,\"expectation_contract_observation_private\":null,\"status\":\"open\",\"active\":true}"
+                    |> Decode.decodeString Api.feedbackDecoder
+                    |> Expect.equal
+                        (Ok
+                            { id = "f1"
+                            , collaboratorId = "c1"
+                            , feedbackDate = "2026-06-02T00:00:00+00:00"
+                            , nextFeedbackDate = Nothing
+                            , observation = Nothing
+                            , observationPrivate = Nothing
+                            , status = Just "open"
+                            , active = True
+                            }
+                        )
+        , test "encodeFeedbackForm always sends collaborator_id and an RFC3339 date, plus the non-empty fields" <|
+            \_ ->
+                Api.encodeFeedbackForm
+                    { collaboratorId = "c1"
+                    , feedbackDate = "2026-06-02"
+                    , nextFeedbackDate = ""
+                    , status = "open"
+                    , observation = ""
+                    , observationPrivate = ""
+                    }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"collaborator_id\":\"c1\",\"feedback_date\":\"2026-06-02T00:00:00Z\",\"status\":\"open\"}"
+        , test "encodeFeedbackForm converts the optional next date to RFC3339 and includes observations" <|
+            \_ ->
+                Api.encodeFeedbackForm
+                    { collaboratorId = "c1"
+                    , feedbackDate = "2026-06-02"
+                    , nextFeedbackDate = "2026-09-01"
+                    , status = ""
+                    , observation = "Great progress"
+                    , observationPrivate = "Private note"
+                    }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"collaborator_id\":\"c1\",\"feedback_date\":\"2026-06-02T00:00:00Z\",\"next_feedback_date\":\"2026-09-01T00:00:00Z\",\"expectation_contract_observation\":\"Great progress\",\"expectation_contract_observation_private\":\"Private note\"}"
         ]

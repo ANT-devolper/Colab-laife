@@ -1,14 +1,16 @@
 module Main exposing (main)
 
 {-| ColabLife SPA entry point. Two states: the sign-in page, and the authenticated
-shell. The shell composes the cadastro write pages: `Page.Sectors`, `Page.Roles`
-and `Page.Collaborators`.
+shell. The shell has tabs: "Cadastro" (sectors, roles and collaborators write CRUD)
+and "Feedback" (per-collaborator feedback).
 -}
 
 import Browser
-import Html exposing (Html, div, h1, text)
-import Html.Attributes exposing (class)
+import Html exposing (Html, button, div, h1, nav, text)
+import Html.Attributes exposing (class, classList, type_)
+import Html.Events exposing (onClick)
 import Page.Collaborators as Collaborators
+import Page.Feedback as Feedback
 import Page.Login as Login
 import Page.Roles as Roles
 import Page.Sectors as Sectors
@@ -23,20 +25,31 @@ type Page
     | AuthedView Authed
 
 
-{-| The authenticated shell's sub-pages.
+{-| The active shell tab.
+-}
+type Tab
+    = CadastroTab
+    | FeedbackTab
+
+
+{-| The authenticated shell's tabs and sub-pages.
 -}
 type alias Authed =
-    { sectors : Sectors.Model
+    { tab : Tab
+    , sectors : Sectors.Model
     , roles : Roles.Model
     , collaborators : Collaborators.Model
+    , feedback : Feedback.Model
     }
 
 
 type Msg
     = LoginMsg Login.Msg
+    | TabSelected Tab
     | SectorsMsg Sectors.Msg
     | RolesMsg Roles.Msg
     | CollaboratorsMsg Collaborators.Msg
+    | FeedbackMsg Feedback.Msg
 
 
 init : () -> ( Model, Cmd Msg )
@@ -63,19 +76,25 @@ update msg model =
 
                         ( collaborators, collaboratorsCmd ) =
                             Collaborators.init token
+
+                        ( feedback, feedbackCmd ) =
+                            Feedback.init token
                     in
                     ( { model
                         | page =
                             AuthedView
-                                { sectors = sectors
+                                { tab = CadastroTab
+                                , sectors = sectors
                                 , roles = roles
                                 , collaborators = collaborators
+                                , feedback = feedback
                                 }
                       }
                     , Cmd.batch
                         [ Cmd.map SectorsMsg sectorsCmd
                         , Cmd.map RolesMsg rolesCmd
                         , Cmd.map CollaboratorsMsg collaboratorsCmd
+                        , Cmd.map FeedbackMsg feedbackCmd
                         ]
                     )
 
@@ -83,6 +102,9 @@ update msg model =
                     ( { model | page = LoginView newLoginModel }
                     , Cmd.map LoginMsg loginCmd
                     )
+
+        ( TabSelected tab, AuthedView authed ) ->
+            ( { model | page = AuthedView { authed | tab = tab } }, Cmd.none )
 
         ( SectorsMsg subMsg, AuthedView authed ) ->
             let
@@ -111,6 +133,15 @@ update msg model =
             , Cmd.map CollaboratorsMsg cmd
             )
 
+        ( FeedbackMsg subMsg, AuthedView authed ) ->
+            let
+                ( feedback, cmd ) =
+                    Feedback.update subMsg authed.feedback
+            in
+            ( { model | page = AuthedView { authed | feedback = feedback } }
+            , Cmd.map FeedbackMsg cmd
+            )
+
         -- Messages that do not match the current page are ignored.
         _ ->
             ( model, Cmd.none )
@@ -130,12 +161,41 @@ viewPage page =
             Html.map LoginMsg (Login.view loginModel)
 
         AuthedView authed ->
-            div [ class "directory" ]
+            div [ class "app" ]
                 [ h1 [] [ text "Directory" ]
-                , Html.map SectorsMsg (Sectors.view authed.sectors)
+                , viewTabs authed.tab
+                , viewTab authed
+                ]
+
+
+viewTabs : Tab -> Html Msg
+viewTabs active =
+    nav [ class "tabs" ]
+        [ tabButton CadastroTab "Cadastro" active
+        , tabButton FeedbackTab "Feedback" active
+        ]
+
+
+tabButton : Tab -> String -> Tab -> Html Msg
+tabButton tab label active =
+    button
+        [ type_ "button", classList [ ( "active", tab == active ) ], onClick (TabSelected tab) ]
+        [ text label ]
+
+
+viewTab : Authed -> Html Msg
+viewTab authed =
+    case authed.tab of
+        CadastroTab ->
+            div [ class "directory" ]
+                [ Html.map SectorsMsg (Sectors.view authed.sectors)
                 , Html.map RolesMsg (Roles.view authed.roles)
                 , Html.map CollaboratorsMsg (Collaborators.view authed.collaborators)
                 ]
+
+        FeedbackTab ->
+            div [ class "directory" ]
+                [ Html.map FeedbackMsg (Feedback.view authed.feedback) ]
 
 
 main : Program () Model Msg

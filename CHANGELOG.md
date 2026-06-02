@@ -274,3 +274,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and the extended decoder) and end-to-end with Playwright (`e2e/tests/collaborators-write.spec.ts`:
   seed a sector + role via the API, sign in → create picking them → edit → deactivate). The backend
   is unchanged (the `/collaborators` write routes already existed).
+- Feedback UI in the Elm SPA (Phase 3A, feedback parent): the authenticated shell now has tabs
+  ("Cadastro" / "Feedback"). `Page/Feedback.elm` picks a collaborator from a dropdown, lists that
+  collaborator's feedbacks and manages them with a single create/edit form (date, next date,
+  status, public/private observations) plus deactivate, re-fetching after each mutation. `Api.elm`
+  gains `Feedback`/`feedbackDecoder`, `getFeedbacks` (with the `?collaborator_id=` filter),
+  `createFeedback`/`updateFeedback`/`deleteFeedback` and the pure `encodeFeedbackForm` (converts
+  the `YYYY-MM-DD` date inputs to RFC3339). Unit-tested with `elm-test` (the feedback decoder and
+  encoder) and end-to-end with Playwright (`e2e/tests/feedback-write.spec.ts`: seed a collaborator
+  via the API, sign in → Feedback tab → pick collaborator → create → edit status → deactivate). The
+  backend is unchanged (the `/feedbacks` routes already existed). The nested expectation-contract
+  items / scored behaviors and the annotations UI are next.

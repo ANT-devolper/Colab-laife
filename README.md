@@ -18,10 +18,10 @@ today:
 - People domains (in progress): the notes & feedback backend — `feedback` with its
   expectation-contract items and scored behaviors, plus standalone `annotation` notes — each
   with RBAC-guarded CRUD.
-- Elm SPA: a login page that obtains a session token and full cadastro management — sectors,
+- Elm SPA: a login page that obtains a session token, full cadastro management — sectors,
   roles and collaborators (create / edit / deactivate), with sector/role/manager dropdowns on
-  the collaborator form — served from the Axum binary on the same origin. Covered by Playwright
-  end-to-end tests.
+  the collaborator form — and a Feedback tab managing per-collaborator feedback; served from the
+  Axum binary on the same origin. Covered by Playwright end-to-end tests.
 
 The eight business modules above are otherwise **planned** — see [`docs/domain/`](docs/domain/)
 for their intended scope.

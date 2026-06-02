@@ -11,6 +11,9 @@ module Api exposing
     , createRole, updateRole, deleteRole
     , CollaboratorForm, emptyCollaboratorForm, collaboratorFormFromCollaborator, encodeCollaboratorForm
     , createCollaborator, updateCollaborator, deleteCollaborator
+    , Feedback, feedbackDecoder, getFeedbacks
+    , FeedbackForm, emptyFeedbackForm, feedbackFormFromFeedback, encodeFeedbackForm
+    , createFeedback, updateFeedback, deleteFeedback
     )
 
 {-| HTTP boundary to the ColabLife backend.
@@ -30,6 +33,9 @@ here is a root-relative path — no base URL or CORS to deal with.
 @docs createRole, updateRole, deleteRole
 @docs CollaboratorForm, emptyCollaboratorForm, collaboratorFormFromCollaborator, encodeCollaboratorForm
 @docs createCollaborator, updateCollaborator, deleteCollaborator
+@docs Feedback, feedbackDecoder, getFeedbacks
+@docs FeedbackForm, emptyFeedbackForm, feedbackFormFromFeedback, encodeFeedbackForm
+@docs createFeedback, updateFeedback, deleteFeedback
 
 -}
 
@@ -499,3 +505,159 @@ replies `204`).
 deleteCollaborator : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
 deleteCollaborator token id toMsg =
     authRequest token "DELETE" ("/collaborators/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)
+
+
+
+-- FEEDBACK
+
+
+{-| A feedback for a collaborator. `feedbackDate`/`nextFeedbackDate` are the raw
+RFC3339 strings from the backend (the UI shows the date part); the contract
+observations and status are optional.
+-}
+type alias Feedback =
+    { id : String
+    , collaboratorId : String
+    , feedbackDate : String
+    , nextFeedbackDate : Maybe String
+    , observation : Maybe String
+    , observationPrivate : Maybe String
+    , status : Maybe String
+    , active : Bool
+    }
+
+
+{-| Decodes a single feedback.
+-}
+feedbackDecoder : Decoder Feedback
+feedbackDecoder =
+    Decode.succeed Feedback
+        |> andMap (Decode.field "id" Decode.string)
+        |> andMap (Decode.field "collaborator_id" Decode.string)
+        |> andMap (Decode.field "feedback_date" Decode.string)
+        |> andMap (optionalString "next_feedback_date")
+        |> andMap (optionalString "expectation_contract_observation")
+        |> andMap (optionalString "expectation_contract_observation_private")
+        |> andMap (optionalString "status")
+        |> andMap (Decode.field "active" Decode.bool)
+
+
+{-| `GET /feedbacks` with the session token; an optional collaborator id narrows
+the list to one collaborator (the backend's `?collaborator_id=` filter).
+-}
+getFeedbacks : String -> Maybe String -> (Result Http.Error (List Feedback) -> msg) -> Cmd msg
+getFeedbacks token collaboratorId toMsg =
+    let
+        url =
+            case collaboratorId of
+                Just id ->
+                    "/feedbacks?collaborator_id=" ++ id
+
+                Nothing ->
+                    "/feedbacks"
+    in
+    authGet token url (Decode.list feedbackDecoder) toMsg
+
+
+{-| The create/update payload for a feedback. Dates are held as `YYYY-MM-DD`
+strings (from `<input type="date">`) and converted to RFC3339 on encode; the
+optional fields are plain strings where empty means "omit".
+-}
+type alias FeedbackForm =
+    { collaboratorId : String
+    , feedbackDate : String
+    , nextFeedbackDate : String
+    , status : String
+    , observation : String
+    , observationPrivate : String
+    }
+
+
+{-| A blank feedback form bound to a collaborator.
+-}
+emptyFeedbackForm : String -> FeedbackForm
+emptyFeedbackForm collaboratorId =
+    { collaboratorId = collaboratorId
+    , feedbackDate = ""
+    , nextFeedbackDate = ""
+    , status = ""
+    , observation = ""
+    , observationPrivate = ""
+    }
+
+
+{-| Pre-fills a feedback form from an existing feedback (for editing). The date
+fields keep only the `YYYY-MM-DD` part.
+-}
+feedbackFormFromFeedback : Feedback -> FeedbackForm
+feedbackFormFromFeedback feedback =
+    { collaboratorId = feedback.collaboratorId
+    , feedbackDate = String.left 10 feedback.feedbackDate
+    , nextFeedbackDate = Maybe.withDefault "" (Maybe.map (String.left 10) feedback.nextFeedbackDate)
+    , status = Maybe.withDefault "" feedback.status
+    , observation = Maybe.withDefault "" feedback.observation
+    , observationPrivate = Maybe.withDefault "" feedback.observationPrivate
+    }
+
+
+{-| Encodes a feedback form: `collaborator_id` and the RFC3339 `feedback_date` are
+always present; the optional next date (also RFC3339) and the text fields are
+included only when non-blank.
+-}
+encodeFeedbackForm : FeedbackForm -> Encode.Value
+encodeFeedbackForm form =
+    let
+        nextDate =
+            if String.trim form.nextFeedbackDate == "" then
+                ""
+
+            else
+                toRfc3339 form.nextFeedbackDate
+    in
+    Encode.object
+        (( "collaborator_id", Encode.string form.collaboratorId )
+            :: ( "feedback_date", Encode.string (toRfc3339 form.feedbackDate) )
+            :: List.filterMap optionalPair
+                [ ( "next_feedback_date", nextDate )
+                , ( "status", form.status )
+                , ( "expectation_contract_observation", form.observation )
+                , ( "expectation_contract_observation_private", form.observationPrivate )
+                ]
+        )
+
+
+{-| Turns a `YYYY-MM-DD` date into the start-of-day UTC RFC3339 the backend parses.
+-}
+toRfc3339 : String -> String
+toRfc3339 date =
+    date ++ "T00:00:00Z"
+
+
+{-| `POST /feedbacks` — creates a feedback.
+-}
+createFeedback : String -> FeedbackForm -> (Result Http.Error Feedback -> msg) -> Cmd msg
+createFeedback token form toMsg =
+    authRequest token
+        "POST"
+        "/feedbacks"
+        (Http.jsonBody (encodeFeedbackForm form))
+        (Http.expectJson toMsg feedbackDecoder)
+
+
+{-| `PATCH /feedbacks/{id}` — updates a feedback.
+-}
+updateFeedback : String -> String -> FeedbackForm -> (Result Http.Error Feedback -> msg) -> Cmd msg
+updateFeedback token id form toMsg =
+    authRequest token
+        "PATCH"
+        ("/feedbacks/" ++ id)
+        (Http.jsonBody (encodeFeedbackForm form))
+        (Http.expectJson toMsg feedbackDecoder)
+
+
+{-| `DELETE /feedbacks/{id}` — deactivates a feedback (soft delete; backend replies
+`204`).
+-}
+deleteFeedback : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
+deleteFeedback token id toMsg =
+    authRequest token "DELETE" ("/feedbacks/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)
