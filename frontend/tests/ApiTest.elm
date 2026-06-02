@@ -198,4 +198,30 @@ suite =
                     }
                     |> Encode.encode 0
                     |> Expect.equal "{\"collaborator_id\":\"c1\",\"feedback_date\":\"2026-06-02T00:00:00Z\",\"next_feedback_date\":\"2026-09-01T00:00:00Z\",\"expectation_contract_observation\":\"Great progress\",\"expectation_contract_observation_private\":\"Private note\"}"
+        , test "expectationItemDecoder reads the item fields" <|
+            \_ ->
+                "{\"id\":\"i1\",\"feedback_id\":\"f1\",\"kind\":\"goal\",\"description\":\"Ship the SDK\",\"done\":false,\"active\":true}"
+                    |> Decode.decodeString Api.expectationItemDecoder
+                    |> Expect.equal
+                        (Ok
+                            { id = "i1"
+                            , feedbackId = "f1"
+                            , kind = "goal"
+                            , description = Just "Ship the SDK"
+                            , done = False
+                            , active = True
+                            }
+                        )
+        , test "encodeExpectationItemForm always sends feedback_id, kind and done, plus a non-empty description" <|
+            \_ ->
+                Api.encodeExpectationItemForm
+                    { feedbackId = "f1", kind = "goal", description = "Ship the SDK", done = False }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"feedback_id\":\"f1\",\"kind\":\"goal\",\"done\":false,\"description\":\"Ship the SDK\"}"
+        , test "encodeExpectationItemForm omits an empty description" <|
+            \_ ->
+                Api.encodeExpectationItemForm
+                    { feedbackId = "f1", kind = "behavior", description = "", done = True }
+                    |> Encode.encode 0
+                    |> Expect.equal "{\"feedback_id\":\"f1\",\"kind\":\"behavior\",\"done\":true}"
         ]

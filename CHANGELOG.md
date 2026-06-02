@@ -283,5 +283,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the `YYYY-MM-DD` date inputs to RFC3339). Unit-tested with `elm-test` (the feedback decoder and
   encoder) and end-to-end with Playwright (`e2e/tests/feedback-write.spec.ts`: seed a collaborator
   via the API, sign in → Feedback tab → pick collaborator → create → edit status → deactivate). The
-  backend is unchanged (the `/feedbacks` routes already existed). The nested expectation-contract
-  items / scored behaviors and the annotations UI are next.
+  backend is unchanged (the `/feedbacks` routes already existed).
+- Expectation-contract UI nested in an open feedback (Phase 3A): the Feedback page gains an "Open"
+  action that expands a feedback into two checklists (goals, behaviors); items can be added,
+  toggled (`done`) and removed. `Api.elm` gains `ExpectationItem`/`expectationItemDecoder`,
+  `getExpectationItems` (the `?feedback_id=` filter), `createExpectationItem`/
+  `updateExpectationItem`/`deleteExpectationItem` and the pure `encodeExpectationItemForm`.
+  Unit-tested with `elm-test` (decoder + encoder) and exercised end-to-end in
+  `e2e/tests/feedback-write.spec.ts` (open feedback → add a goal → mark it done → remove it). The
+  backend is unchanged (the `/expectation-items` routes already existed). The scored behaviors and
+  the annotations UI are next.

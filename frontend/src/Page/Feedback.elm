@@ -11,9 +11,9 @@ after each successful mutation.
 -}
 
 import Api
-import Html exposing (Html, button, em, form, h2, input, label, option, p, section, select, span, table, tbody, td, text, textarea, th, thead, tr)
-import Html.Attributes exposing (attribute, class, disabled, selected, type_, value)
-import Html.Events exposing (onClick, onInput, onSubmit)
+import Html exposing (Html, button, div, em, form, h2, input, label, li, option, p, section, select, span, table, tbody, td, text, textarea, th, thead, tr, ul)
+import Html.Attributes exposing (attribute, checked, class, disabled, selected, type_, value)
+import Html.Events exposing (onCheck, onClick, onInput, onSubmit)
 import Http
 
 
@@ -25,6 +25,8 @@ type Load a
 
 {-| Page state. `selected` is the chosen collaborator id (`""` = none); `editing`
 is `Just feedbackId` while editing. `form` is bound to the selected collaborator.
+`openFeedback` is the feedback whose expectation contract is being managed, with
+its `items` and the two "new item" inputs.
 -}
 type alias Model =
     { token : String
@@ -34,6 +36,10 @@ type alias Model =
     , form : Api.FeedbackForm
     , editing : Maybe String
     , error : Maybe String
+    , openFeedback : Maybe String
+    , items : Load (List Api.ExpectationItem)
+    , newGoal : String
+    , newBehavior : String
     }
 
 
@@ -48,6 +54,15 @@ type Msg
     | EditCancelled
     | DeactivateClicked String
     | Deactivated (Result Http.Error ())
+    | OpenClicked String
+    | CloseClicked
+    | GotItems (Result Http.Error (List Api.ExpectationItem))
+    | NewItemChanged ItemKind String
+    | AddItem ItemKind
+    | ToggleItem Api.ExpectationItem
+    | RemoveItem String
+    | ItemSaved (Result Http.Error Api.ExpectationItem)
+    | ItemDeactivated (Result Http.Error ())
 
 
 type Field
@@ -56,6 +71,23 @@ type Field
     | Status
     | Observation
     | ObservationPrivate
+
+
+{-| The two kinds of expectation-contract item.
+-}
+type ItemKind
+    = Goal
+    | Behavior
+
+
+kindValue : ItemKind -> String
+kindValue kind =
+    case kind of
+        Goal ->
+            "goal"
+
+        Behavior ->
+            "behavior"
 
 
 {-| Starts loading the collaborators (the feedback list waits for a selection).
@@ -69,6 +101,10 @@ init token =
       , form = Api.emptyFeedbackForm ""
       , editing = Nothing
       , error = Nothing
+      , openFeedback = Nothing
+      , items = Loaded []
+      , newGoal = ""
+      , newBehavior = ""
       }
     , Api.getCollaborators token GotCollaborators
     )
@@ -98,6 +134,7 @@ update msg model =
                     , form = Api.emptyFeedbackForm id
                     , editing = Nothing
                     , error = Nothing
+                    , openFeedback = Nothing
                   }
                 , Api.getFeedbacks model.token (Just id) GotFeedbacks
                 )
@@ -148,10 +185,70 @@ update msg model =
             ( { model | error = Nothing }, Api.deleteFeedback model.token id Deactivated )
 
         Deactivated (Ok ()) ->
-            ( model, Api.getFeedbacks model.token (Just model.selected) GotFeedbacks )
+            ( { model | openFeedback = Nothing, items = Loaded [] }
+            , Api.getFeedbacks model.token (Just model.selected) GotFeedbacks
+            )
 
         Deactivated (Err _) ->
             ( { model | error = Just "Could not deactivate the feedback." }, Cmd.none )
+
+        OpenClicked id ->
+            ( { model | openFeedback = Just id, items = Loading, newGoal = "", newBehavior = "" }
+            , Api.getExpectationItems model.token id GotItems
+            )
+
+        CloseClicked ->
+            ( { model | openFeedback = Nothing, items = Loaded [] }, Cmd.none )
+
+        GotItems result ->
+            ( { model | items = fromResult result }, Cmd.none )
+
+        NewItemChanged Goal value ->
+            ( { model | newGoal = value }, Cmd.none )
+
+        NewItemChanged Behavior value ->
+            ( { model | newBehavior = value }, Cmd.none )
+
+        AddItem kind ->
+            case ( model.openFeedback, newItemText kind model ) of
+                ( Just feedbackId, description ) ->
+                    if String.isEmpty (String.trim description) then
+                        ( model, Cmd.none )
+
+                    else
+                        ( clearNewItem kind model
+                        , Api.createExpectationItem model.token
+                            { feedbackId = feedbackId
+                            , kind = kindValue kind
+                            , description = description
+                            , done = False
+                            }
+                            ItemSaved
+                        )
+
+                ( Nothing, _ ) ->
+                    ( model, Cmd.none )
+
+        ToggleItem item ->
+            ( model
+            , Api.updateExpectationItem model.token
+                item.id
+                { feedbackId = item.feedbackId
+                , kind = item.kind
+                , description = Maybe.withDefault "" item.description
+                , done = not item.done
+                }
+                ItemSaved
+            )
+
+        RemoveItem id ->
+            ( model, Api.deleteExpectationItem model.token id ItemDeactivated )
+
+        ItemSaved _ ->
+            ( model, reloadItems model )
+
+        ItemDeactivated _ ->
+            ( model, reloadItems model )
 
 
 setField : Field -> String -> Api.FeedbackForm -> Api.FeedbackForm
@@ -171,6 +268,36 @@ setField field fieldValue form =
 
         ObservationPrivate ->
             { form | observationPrivate = fieldValue }
+
+
+newItemText : ItemKind -> Model -> String
+newItemText kind model =
+    case kind of
+        Goal ->
+            model.newGoal
+
+        Behavior ->
+            model.newBehavior
+
+
+clearNewItem : ItemKind -> Model -> Model
+clearNewItem kind model =
+    case kind of
+        Goal ->
+            { model | newGoal = "" }
+
+        Behavior ->
+            { model | newBehavior = "" }
+
+
+reloadItems : Model -> Cmd Msg
+reloadItems model =
+    case model.openFeedback of
+        Just id ->
+            Api.getExpectationItems model.token id GotItems
+
+        Nothing ->
+            Cmd.none
 
 
 fromResult : Result Http.Error a -> Load a
@@ -205,7 +332,8 @@ view model =
             section []
                 [ viewForm model
                 , viewError model.error
-                , viewList model.feedbacks
+                , viewList model.openFeedback model.feedbacks
+                , viewContract model
                 ]
         ]
 
@@ -300,8 +428,8 @@ viewError error =
             text ""
 
 
-viewList : Load (List Api.Feedback) -> Html Msg
-viewList load =
+viewList : Maybe String -> Load (List Api.Feedback) -> Html Msg
+viewList openFeedback load =
     case load of
         Loading ->
             p [ class "status" ] [ text "Loading…" ]
@@ -318,17 +446,100 @@ viewList load =
                     [ tr []
                         [ th [] [ text "Date" ], th [] [ text "Status" ], th [] [ text "Actions" ] ]
                     ]
-                , tbody [] (List.map viewRow feedbacks)
+                , tbody [] (List.map (viewRow openFeedback) feedbacks)
                 ]
 
 
-viewRow : Api.Feedback -> Html Msg
-viewRow feedback =
+viewRow : Maybe String -> Api.Feedback -> Html Msg
+viewRow openFeedback feedback =
+    let
+        openButton =
+            if openFeedback == Just feedback.id then
+                button [ type_ "button", onClick CloseClicked ] [ text "Close" ]
+
+            else
+                button [ type_ "button", onClick (OpenClicked feedback.id) ] [ text "Open" ]
+    in
     tr []
         [ td [] [ text (String.left 10 feedback.feedbackDate) ]
         , td [] [ text (Maybe.withDefault "—" feedback.status) ]
         , td []
-            [ button [ type_ "button", onClick (EditClicked feedback) ] [ text "Edit" ]
+            [ openButton
+            , button [ type_ "button", onClick (EditClicked feedback) ] [ text "Edit" ]
             , button [ type_ "button", onClick (DeactivateClicked feedback.id) ] [ text "Deactivate" ]
             ]
+        ]
+
+
+{-| The expectation contract of the open feedback: two checklists (goals,
+behaviors). Hidden when no feedback is open.
+-}
+viewContract : Model -> Html Msg
+viewContract model =
+    case model.openFeedback of
+        Nothing ->
+            text ""
+
+        Just _ ->
+            section [ class "contract" ]
+                [ h2 [] [ text "Expectation contract" ]
+                , case model.items of
+                    Loading ->
+                        p [ class "status" ] [ text "Loading…" ]
+
+                    Failed ->
+                        p [ class "status error" ] [ text "Could not load the contract." ]
+
+                    Loaded loadedItems ->
+                        div []
+                            [ viewChecklist "Goals" Goal "New goal" "Add goal" model.newGoal loadedItems
+                            , viewChecklist "Behaviors" Behavior "New behavior" "Add behavior" model.newBehavior loadedItems
+                            ]
+                ]
+
+
+viewChecklist : String -> ItemKind -> String -> String -> String -> List Api.ExpectationItem -> Html Msg
+viewChecklist title kind inputLabel addLabel newValue items =
+    let
+        ofKind =
+            List.filter (\item -> item.kind == kindValue kind) items
+    in
+    section [ class "checklist" ]
+        [ h2 [] [ text title ]
+        , ul [] (List.map viewItem ofKind)
+        , form [ class "create-form", onSubmit (AddItem kind) ]
+            [ label []
+                [ span [] [ text inputLabel ]
+                , input
+                    [ attribute "aria-label" inputLabel
+                    , value newValue
+                    , onInput (NewItemChanged kind)
+                    ]
+                    []
+                ]
+            , button
+                [ type_ "submit", disabled (String.isEmpty (String.trim newValue)) ]
+                [ text addLabel ]
+            ]
+        ]
+
+
+viewItem : Api.ExpectationItem -> Html Msg
+viewItem item =
+    let
+        description =
+            Maybe.withDefault "—" item.description
+    in
+    li []
+        [ label []
+            [ input
+                [ type_ "checkbox"
+                , checked item.done
+                , attribute "aria-label" description
+                , onCheck (\_ -> ToggleItem item)
+                ]
+                []
+            , span [] [ text description ]
+            ]
+        , button [ type_ "button", onClick (RemoveItem item.id) ] [ text "Remove" ]
         ]

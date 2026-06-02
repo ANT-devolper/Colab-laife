@@ -56,7 +56,18 @@ test('admin creates, edits and deactivates a feedback', async ({ page, baseURL }
   await expect(page.getByRole('cell', { name: 'reviewed', exact: true })).toBeVisible();
   await expect(page.getByRole('cell', { name: 'open', exact: true })).toHaveCount(0);
 
-  // Deactivate it — it leaves the (active-only) list.
+  // Open it and manage the expectation contract: add a goal, mark it done, remove it.
+  await page.getByRole('row', { name: /reviewed/ }).getByRole('button', { name: 'Open' }).click();
+  await expect(page.getByRole('heading', { name: 'Expectation contract' })).toBeVisible();
+  await page.getByLabel('New goal').fill('Ship the SDK');
+  await page.getByRole('button', { name: 'Add goal' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Ship the SDK' })).toBeVisible();
+  await page.getByRole('checkbox', { name: 'Ship the SDK' }).check();
+  await expect(page.getByRole('checkbox', { name: 'Ship the SDK' })).toBeChecked();
+  await page.getByRole('listitem').filter({ hasText: 'Ship the SDK' }).getByRole('button', { name: 'Remove' }).click();
+  await expect(page.getByRole('checkbox', { name: 'Ship the SDK' })).toHaveCount(0);
+
+  // Deactivate the feedback — it leaves the (active-only) list.
   await page.getByRole('row', { name: /reviewed/ }).getByRole('button', { name: 'Deactivate' }).click();
   await expect(page.getByRole('cell', { name: 'reviewed', exact: true })).toHaveCount(0);
 });

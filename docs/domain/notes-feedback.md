@@ -3,7 +3,8 @@
 > **Status:** ✅ backend implemented — the `feedback` event, its expectation-contract items, its
 > scored behaviors and standalone `annotation` notes all have RBAC-guarded CRUD. The Elm UI is
 > 🚧 in progress: the **feedback parent** (list/create/edit/deactivate per collaborator) is done;
-> the nested items/behaviors and the annotations UI are next. The deferred concerns below
+> the **expectation-contract items** (goals/behaviors checklist) of an open feedback are done
+> too; the scored behaviors and the annotations UI are next. The deferred concerns below
 > (AI/transcription, attachments, messaging) remain planned.
 
 ## Purpose

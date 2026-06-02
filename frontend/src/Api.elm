@@ -14,6 +14,9 @@ module Api exposing
     , Feedback, feedbackDecoder, getFeedbacks
     , FeedbackForm, emptyFeedbackForm, feedbackFormFromFeedback, encodeFeedbackForm
     , createFeedback, updateFeedback, deleteFeedback
+    , ExpectationItem, expectationItemDecoder, getExpectationItems
+    , ExpectationItemForm, encodeExpectationItemForm
+    , createExpectationItem, updateExpectationItem, deleteExpectationItem
     )
 
 {-| HTTP boundary to the ColabLife backend.
@@ -36,6 +39,9 @@ here is a root-relative path — no base URL or CORS to deal with.
 @docs Feedback, feedbackDecoder, getFeedbacks
 @docs FeedbackForm, emptyFeedbackForm, feedbackFormFromFeedback, encodeFeedbackForm
 @docs createFeedback, updateFeedback, deleteFeedback
+@docs ExpectationItem, expectationItemDecoder, getExpectationItems
+@docs ExpectationItemForm, encodeExpectationItemForm
+@docs createExpectationItem, updateExpectationItem, deleteExpectationItem
 
 -}
 
@@ -661,3 +667,96 @@ updateFeedback token id form toMsg =
 deleteFeedback : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
 deleteFeedback token id toMsg =
     authRequest token "DELETE" ("/feedbacks/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)
+
+
+
+-- EXPECTATION CONTRACT ITEMS
+
+
+{-| One item of a feedback's expectation contract: a `goal` or `behavior`
+checklist line (`kind`) with an optional description and a `done` flag.
+-}
+type alias ExpectationItem =
+    { id : String
+    , feedbackId : String
+    , kind : String
+    , description : Maybe String
+    , done : Bool
+    , active : Bool
+    }
+
+
+{-| Decodes a single expectation-contract item.
+-}
+expectationItemDecoder : Decoder ExpectationItem
+expectationItemDecoder =
+    Decode.succeed ExpectationItem
+        |> andMap (Decode.field "id" Decode.string)
+        |> andMap (Decode.field "feedback_id" Decode.string)
+        |> andMap (Decode.field "kind" Decode.string)
+        |> andMap (optionalString "description")
+        |> andMap (Decode.field "done" Decode.bool)
+        |> andMap (Decode.field "active" Decode.bool)
+
+
+{-| `GET /expectation-items?feedback_id=` — the items of one feedback (both kinds).
+-}
+getExpectationItems : String -> String -> (Result Http.Error (List ExpectationItem) -> msg) -> Cmd msg
+getExpectationItems token feedbackId toMsg =
+    authGet token
+        ("/expectation-items?feedback_id=" ++ feedbackId)
+        (Decode.list expectationItemDecoder)
+        toMsg
+
+
+{-| The create/update payload for an expectation-contract item.
+-}
+type alias ExpectationItemForm =
+    { feedbackId : String
+    , kind : String
+    , description : String
+    , done : Bool
+    }
+
+
+{-| Encodes an item form: `feedback_id`, `kind` and `done` are always present; the
+description is included only when non-blank.
+-}
+encodeExpectationItemForm : ExpectationItemForm -> Encode.Value
+encodeExpectationItemForm form =
+    Encode.object
+        (( "feedback_id", Encode.string form.feedbackId )
+            :: ( "kind", Encode.string form.kind )
+            :: ( "done", Encode.bool form.done )
+            :: List.filterMap optionalPair [ ( "description", form.description ) ]
+        )
+
+
+{-| `POST /expectation-items` — creates an item under a feedback.
+-}
+createExpectationItem : String -> ExpectationItemForm -> (Result Http.Error ExpectationItem -> msg) -> Cmd msg
+createExpectationItem token form toMsg =
+    authRequest token
+        "POST"
+        "/expectation-items"
+        (Http.jsonBody (encodeExpectationItemForm form))
+        (Http.expectJson toMsg expectationItemDecoder)
+
+
+{-| `PATCH /expectation-items/{id}` — updates an item (e.g. toggling `done`).
+-}
+updateExpectationItem : String -> String -> ExpectationItemForm -> (Result Http.Error ExpectationItem -> msg) -> Cmd msg
+updateExpectationItem token id form toMsg =
+    authRequest token
+        "PATCH"
+        ("/expectation-items/" ++ id)
+        (Http.jsonBody (encodeExpectationItemForm form))
+        (Http.expectJson toMsg expectationItemDecoder)
+
+
+{-| `DELETE /expectation-items/{id}` — deactivates an item (soft delete; backend
+replies `204`).
+-}
+deleteExpectationItem : String -> String -> (Result Http.Error () -> msg) -> Cmd msg
+deleteExpectationItem token id toMsg =
+    authRequest token "DELETE" ("/expectation-items/" ++ id) Http.emptyBody (Http.expectWhatever toMsg)

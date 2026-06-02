@@ -248,8 +248,10 @@ over HTTP/JSON. Current scope:
   collaborator dropdown; picking one lists that collaborator's feedbacks and binds a single
   create/edit form (date, next date, status, public/private observations), plus deactivate.
   Write calls (`createFeedback`/`updateFeedback`/`deleteFeedback`) and the form encoder — which
-  converts the `YYYY-MM-DD` date inputs to RFC3339 — live in `Api.elm`. The nested
-  expectation-contract items / scored behaviors and the annotations UI are 🚧 next.
+  converts the `YYYY-MM-DD` date inputs to RFC3339 — live in `Api.elm`. An "Open" action expands
+  a feedback's **expectation contract**: two checklists (goals, behaviors) where items can be
+  added, toggled (`done`) and removed (`createExpectationItem`/`updateExpectationItem`/
+  `deleteExpectationItem`). The scored behaviors and the annotations UI are 🚧 next.
 
 **Single-origin delivery** ([ADR 0011](adr/0011-serve-spa-from-axum.md)): the Axum binary
 serves the built SPA itself, so the browser only ever talks to one origin (no CORS). ✅
